@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
+import { getCardImageUrl } from "@/utils/cardImages";
 
 interface Player {
   id: string;
@@ -339,18 +340,22 @@ function GameContent() {
 
             <div className="bg-zinc-900 rounded-lg p-6">
               <div className="text-sm text-gray-400 mb-3">Your Cards ({myCards.length})</div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-3">
                 {sortCards(myCards).map((card, index) => (
                   <button
                     key={`${card}-${index}`}
                     onClick={() => toggleCardSelection(card)}
-                    className={`px-4 py-6 rounded-lg font-medium transition-all ${
+                    className={`relative rounded-lg transition-all transform hover:scale-105 ${
                       selectedCards.includes(card)
-                        ? "bg-white text-black"
-                        : "bg-zinc-800 border border-zinc-700 hover:bg-zinc-700"
+                        ? "ring-4 ring-white -translate-y-4"
+                        : "hover:-translate-y-2"
                     }`}
                   >
-                    {card}
+                    <img
+                      src={getCardImageUrl(card)}
+                      alt={card}
+                      className="w-20 h-28 rounded-lg shadow-lg"
+                    />
                   </button>
                 ))}
               </div>
