@@ -129,7 +129,7 @@ export function setupGameHandlers(io: Server, socket: Socket) {
     currentPlayer.cards = currentPlayer.cards.filter(card => !cards.includes(card));
     room.pile.push(...cards);
     
-    // set rank only if not already set (first player of round sets it)
+    // First player to play in a round sets the rank for that round
     if (!room.currentRank) {
       room.currentRank = claimedRank.toUpperCase();
     }
@@ -147,19 +147,30 @@ export function setupGameHandlers(io: Server, socket: Socket) {
       rank: claimedRank.toUpperCase(),
     });
 
+    // Check if the current player has won by playing their last card
     if (currentPlayer.cards.length === 0) {
+      // Game ends when a player runs out of cards
+      room.gameStarted = false;
+      // Update all clients with the final game state
+      io.to(roomCode).emit('game-state', {
+        ...getGameState(room),
+        gameStarted: false,
+        winner: currentPlayer.name
+      });
+      // Let everyone know who won
       io.to(roomCode).emit('game-won', { winnerName: currentPlayer.name });
-      await deleteRoom(roomCode);
-      rooms.delete(roomCode);
-      return;
+      // Give clients time to see the results before cleaning up the room
+      setTimeout(async () => {
+        await deleteRoom(roomCode);
+        rooms.delete(roomCode);
+      }, 5000);
+    } else {
+      // Move to next player's turn
+      room.currentPlayerIndex = (room.currentPlayerIndex + 1) % room.players.length;
+      await saveRoom(room);
+      io.to(currentPlayer.socketId).emit('your-cards', currentPlayer.cards);
+      io.to(roomCode).emit('game-state', getGameState(room));
     }
-
-    room.currentPlayerIndex = (room.currentPlayerIndex + 1) % room.players.length;
-    
-    await saveRoom(room);
-    
-    io.to(currentPlayer.socketId).emit('your-cards', currentPlayer.cards);
-    io.to(roomCode).emit('game-state', getGameState(room));
   });
 
   socket.on('call-bluff', async (data: { roomCode: string }) => {
@@ -183,7 +194,7 @@ export function setupGameHandlers(io: Server, socket: Socket) {
       return;
     }
 
-    // cannot call bluff on your own play
+    // Players can't call bluff on themselves
     if (caller.id === lastPlayer.id) {
       socket.emit('error', 'Cannot call bluff on your own play');
       return;
@@ -206,7 +217,7 @@ export function setupGameHandlers(io: Server, socket: Socket) {
     room.currentRank = null;
     room.passedPlayers.clear();
 
-    // winner of bluff starts next round
+    // Winner of the bluff call goes first in the next round
     const winnerIndex = room.players.findIndex(p => p.id === (wasBluff ? caller.id : lastPlayer.id));
     room.currentPlayerIndex = winnerIndex;
 
@@ -248,7 +259,7 @@ export function setupGameHandlers(io: Server, socket: Socket) {
     io.to(roomCode).emit('player-passed', { playerName: currentPlayer.name });
 
     if (room.passedPlayers.size === room.players.length - 1) {
-      // everyone passed, person who didn't pass (current player) starts next round
+      // If everyone else passed, current player starts fresh round
       room.currentRank = null;
       room.pile = [];
       room.lastPlay = null;

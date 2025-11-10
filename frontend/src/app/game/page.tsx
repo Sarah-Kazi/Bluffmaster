@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { getCardImageUrl } from "@/utils/cardImages";
+import { Copy, Check } from "lucide-react";
 
 interface Player {
   id: string;
@@ -72,7 +73,6 @@ function GameContent() {
     });
 
     newSocket.on("room-joined", (data: { players: Player[] }) => {
-      setMessage(`Joined room ${roomCode}`);
       setGameState(prev => ({ ...prev, players: data.players }));
     });
 
@@ -85,32 +85,17 @@ function GameContent() {
       setSelectedCards([]);
     });
 
-    newSocket.on("game-started", () => {
-      setMessage("Game started!");
-    });
-
-    newSocket.on("play-made", (data: { playerName: string; count: number; rank: string }) => {
-      setMessage(`${data.playerName} played ${data.count} ${data.rank}(s)`);
-    });
-
-    newSocket.on("bluff-called", (data: { callerName: string; lastPlayerName: string; wasBluff: boolean; penalizedPlayerName: string }) => {
-      if (data.wasBluff) {
-        setMessage(`${data.callerName} called bluff! ${data.lastPlayerName} was bluffing and takes all cards!`);
-      } else {
-        setMessage(`${data.callerName} called bluff! ${data.lastPlayerName} was NOT bluffing! ${data.callerName} takes all cards!`);
-      }
-    });
-
-    newSocket.on("player-passed", (data: { playerName: string }) => {
-      setMessage(`${data.playerName} passed`);
-    });
-
-    newSocket.on("round-ended", (data: { starterName: string }) => {
-      setMessage(`Round ended. ${data.starterName} starts the next round!`);
-    });
-
+    newSocket.on("game-started", () => {});
+    newSocket.on("play-made", () => {});
+    newSocket.on("bluff-called", () => {});
+    newSocket.on("player-passed", () => {});
+    newSocket.on("round-ended", () => {});
     newSocket.on("game-won", (data: { winnerName: string }) => {
-      setMessage(`${data.winnerName} won the game!`);
+      setGameState(prev => ({
+        ...prev,
+        winner: data.winnerName,
+        gameStarted: false
+      }));
     });
 
     newSocket.on("error", (error: string) => {
@@ -143,19 +128,15 @@ function GameContent() {
   };
 
   const playCards = () => {
-    if (selectedCards.length === 0) {
-      alert("Select at least one card");
-      return;
-    }
-    if (!claimedRank) {
-      alert("Enter the rank you're claiming");
+    const rankToUse = claimedRank || gameState.currentRank || '';
+    if (selectedCards.length === 0 || !rankToUse) {
       return;
     }
     if (socket) {
       socket.emit("play-cards", {
         roomCode,
         cards: selectedCards,
-        claimedRank: claimedRank.toUpperCase(),
+        claimedRank: rankToUse.toUpperCase(),
       });
       setClaimedRank("");
     }
@@ -218,8 +199,20 @@ function GameContent() {
       <div className="max-w-6xl mx-auto space-y-4">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Room: {roomCode}</h1>
-            <p className="text-sm text-gray-400">{message}</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">Room: {roomCode}</h1>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(roomCode || '');
+                  setMessage('Room code copied to clipboard!');
+                  setTimeout(() => setMessage(''), 2000);
+                }}
+                className="p-1.5 rounded-full hover:bg-zinc-700 transition-colors"
+                title="Copy room code"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           {isHost && !gameState.gameStarted && gameState.players.length >= 2 && (
             <button
@@ -285,10 +278,7 @@ function GameContent() {
                         Playing: {gameState.currentRank}
                       </div>
                       <button
-                        onClick={() => {
-                          setClaimedRank(gameState.currentRank || '');
-                          playCards();
-                        }}
+                        onClick={playCards}
                         disabled={selectedCards.length === 0}
                         className="px-6 py-2 bg-white text-black font-medium rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
                       >

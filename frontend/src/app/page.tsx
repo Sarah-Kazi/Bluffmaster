@@ -81,7 +81,7 @@ export default function Home() {
 
             <button
               onClick={joinRoom}
-              className="w-full py-3 bg-zinc-800 border border-zinc-700 font-medium rounded-lg hover:bg-zinc-700 transition-colors"
+              className="w-full py-3 bg-white text-black font-medium rounded-lg hover:bg-gray-200 transition-colors"
             >
               Join Game
             </button>
