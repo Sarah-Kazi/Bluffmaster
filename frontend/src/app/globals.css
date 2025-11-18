@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Popup slide-up animation */
+@keyframes slide-up {
+  0% {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.popup-card {
+  animation: slide-up 0.4s ease-out forwards;
+}
+
 :root {
   --background: #0a0a0a;
   --foreground: #ededed;

@@ -27,6 +27,7 @@ export function setupGameHandlers(io: Server, socket: Socket) {
         currentRank: null,
         pile: [],
         lastPlay: null,
+        finishOrder: [],
         passedPlayers: new Set(),
         gameStarted: false,
         hostId: socket.id,
@@ -147,29 +148,63 @@ export function setupGameHandlers(io: Server, socket: Socket) {
       rank: claimedRank.toUpperCase(),
     });
 
-    // Check if the current player has won by playing their last card
-    if (currentPlayer.cards.length === 0) {
-      // Game ends when a player runs out of cards
-      room.gameStarted = false;
-      // Update all clients with the final game state
-      io.to(roomCode).emit('game-state', {
-        ...getGameState(room),
-        gameStarted: false,
-        winner: currentPlayer.name
-      });
-      // Let everyone know who won
-      io.to(roomCode).emit('game-won', { winnerName: currentPlayer.name });
-      // Give clients time to see the results before cleaning up the room
-      setTimeout(async () => {
-        await deleteRoom(roomCode);
-        rooms.delete(roomCode);
-      }, 5000);
-    } else {
-      // Move to next player's turn
-      room.currentPlayerIndex = (room.currentPlayerIndex + 1) % room.players.length;
-      await saveRoom(room);
-      io.to(currentPlayer.socketId).emit('your-cards', currentPlayer.cards);
-      io.to(roomCode).emit('game-state', getGameState(room));
+    // Did the player empty their hand?
+    const playerEmptiedHand = currentPlayer.cards.length === 0;
+    if (playerEmptiedHand) {
+      currentPlayer.finished = true;
+      if (!room.finishOrder.includes(currentPlayer.id)) {
+        room.finishOrder.push(currentPlayer.id);
+      }
+    }
+
+    // Move to next active player's turn (skip finished players)
+    let nextIndex = (room.currentPlayerIndex + 1) % room.players.length;
+    let safety = 0;
+    while (room.players[nextIndex].finished && safety < room.players.length) {
+      nextIndex = (nextIndex + 1) % room.players.length;
+      safety++;
+    }
+    room.currentPlayerIndex = nextIndex;
+
+    await saveRoom(room);
+    io.to(currentPlayer.socketId).emit('your-cards', currentPlayer.cards);
+
+    // Broadcast game state – include potential winner but keep game running
+    io.to(roomCode).emit('game-state', getGameState(room));
+
+    if (playerEmptiedHand) {
+      io.to(roomCode).emit('player-finished', { playerId: currentPlayer.id, playerName: currentPlayer.name });
+      // Notify all players that the round has ended due to a player finishing
+      io.to(roomCode).emit('round-ended', { starterName: room.players[room.currentPlayerIndex].name });
+
+      // When a player finishes, check if we should end the game
+      const activePlayers = room.players.filter(p => !p.finished);
+      
+      // If only one or zero players remain, the game is over
+      if (activePlayers.length <= 1) {
+        room.gameStarted = false;
+        
+        // Build the complete leaderboard
+        const leaderboard = [...room.finishOrder];
+        
+        // Add any remaining active players who haven't been added to finishOrder yet
+        activePlayers.forEach(player => {
+          if (!leaderboard.includes(player.id)) {
+            leaderboard.push(player.id);
+          }
+        });
+        
+        // Convert player IDs to names for the frontend
+        const leaderboardNames = leaderboard
+          .map(id => {
+            const player = room.players.find(p => p.id === id);
+            return player ? player.name : null;
+          })
+          .filter((name): name is string => name !== null);
+        
+        console.log('Game over! Leaderboard:', leaderboardNames);
+        io.to(roomCode).emit('game-over', { leaderboard: leaderboardNames });
+      }
     }
   });
 
@@ -195,7 +230,8 @@ export function setupGameHandlers(io: Server, socket: Socket) {
     }
 
     // Players can't call bluff on themselves
-    if (caller.id === lastPlayer.id) {
+    // Players can call bluff on themselves *only* if they just emptied their hand (edge case)
+    if (caller.id === lastPlayer.id && !lastPlayer.finished) {
       socket.emit('error', 'Cannot call bluff on your own play');
       return;
     }
@@ -219,7 +255,24 @@ export function setupGameHandlers(io: Server, socket: Socket) {
 
     // Winner of the bluff call goes first in the next round
     const winnerIndex = room.players.findIndex(p => p.id === (wasBluff ? caller.id : lastPlayer.id));
+    // If a penalized player was previously marked finished and now gains cards, reset finished flag
+    if (penalizedPlayer.cards.length > 0) {
+      penalizedPlayer.finished = false;
+      const idxInFinish = room.finishOrder.indexOf(penalizedPlayer.id);
+      if (idxInFinish !== -1) {
+        room.finishOrder.splice(idxInFinish, 1);
+      }
+    }
+
+    // Winner of the bluff call takes the first turn in the next round.
     room.currentPlayerIndex = winnerIndex;
+
+    // If that winner has already finished their cards, move to the next active player.
+    let rotateSafe = 0;
+    while (room.players[room.currentPlayerIndex].finished && rotateSafe < room.players.length) {
+      room.currentPlayerIndex = (room.currentPlayerIndex + 1) % room.players.length;
+      rotateSafe++;
+    }
 
     io.to(roomCode).emit('bluff-called', {
       callerName: caller.name,
@@ -258,7 +311,9 @@ export function setupGameHandlers(io: Server, socket: Socket) {
 
     io.to(roomCode).emit('player-passed', { playerName: currentPlayer.name });
 
-    if (room.passedPlayers.size === room.players.length - 1) {
+    // If every other *active* player except current has passed
+    const activePlayersCount = room.players.filter(p => !p.finished).length;
+    if (room.passedPlayers.size === activePlayersCount - 1) {
       // If everyone else passed, current player starts fresh round
       room.currentRank = null;
       room.pile = [];
@@ -267,7 +322,14 @@ export function setupGameHandlers(io: Server, socket: Socket) {
 
       io.to(roomCode).emit('round-ended', { starterName: currentPlayer.name });
     } else {
-      room.currentPlayerIndex = (room.currentPlayerIndex + 1) % room.players.length;
+      // Move to next active player
+      let nextPassIdx = (room.currentPlayerIndex + 1) % room.players.length;
+      let guard = 0;
+      while (room.players[nextPassIdx].finished && guard < room.players.length) {
+        nextPassIdx = (nextPassIdx + 1) % room.players.length;
+        guard++;
+      }
+      room.currentPlayerIndex = nextPassIdx;
     }
 
     await saveRoom(room);
@@ -306,7 +368,7 @@ function getPlayerInfo(room: GameRoom) {
     id: p.id,
     name: p.name,
     cardCount: p.cards.length,
-    isActive: true,
+    isActive: !p.finished,
   }));
 }
 
@@ -323,9 +385,11 @@ function getGameState(room: GameRoom) {
       rank: room.lastPlay.claimedRank,
     } : null,
     canCallBluff: room.lastPlay !== null,
-    canPass: room.currentRank !== null && room.passedPlayers.size < room.players.length - 1,
+    canPass: room.currentRank !== null && room.passedPlayers.size < room.players.filter(p => !p.finished).length - 1,
     roundEnded: room.currentRank === null && room.pile.length === 0 && room.gameStarted,
     gameStarted: room.gameStarted,
-    winner: null,
+    // Only declare a winner after the game actually started and at least one player has finished
+    winner: (!room.gameStarted && room.players.filter(p => !p.finished).length === 1 && room.players.some(p => p.finished)) ?
+      room.players.find(p => !p.finished)?.name || null : null,
   };
 }

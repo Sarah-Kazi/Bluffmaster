@@ -28,6 +28,7 @@ interface GameState {
   canPass: boolean;
   roundEnded: boolean;
   gameStarted: boolean;
+  leaderboard: string[];
   winner: string | null;
 }
 
@@ -51,6 +52,7 @@ function GameContent() {
     canPass: false,
     roundEnded: false,
     gameStarted: false,
+    leaderboard: [],
     winner: null,
   });
   const [claimedRank, setClaimedRank] = useState("");
@@ -90,10 +92,10 @@ function GameContent() {
     newSocket.on("bluff-called", () => {});
     newSocket.on("player-passed", () => {});
     newSocket.on("round-ended", () => {});
-    newSocket.on("game-won", (data: { winnerName: string }) => {
+    newSocket.on("game-over", (data: { leaderboard: string[] }) => {
       setGameState(prev => ({
         ...prev,
-        winner: data.winnerName,
+        leaderboard: data.leaderboard,
         gameStarted: false
       }));
     });
@@ -177,18 +179,51 @@ function GameContent() {
     );
   }
 
-  if (gameState.winner) {
+  if (!gameState.gameStarted && gameState.leaderboard && gameState.leaderboard.length > 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold">Game Over!</h1>
-          <p className="text-2xl">{gameState.winner} won!</p>
-          <button
-            onClick={() => window.location.href = "/"}
-            className="px-6 py-3 bg-white text-black font-medium rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            Back to Home
-          </button>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-zinc-900">
+        <div className="text-center space-y-6 w-full max-w-md">
+          <h1 className="text-4xl font-bold text-white mb-6">Game Over</h1>
+          
+          <div className="bg-zinc-800 rounded-xl shadow-2xl overflow-hidden">
+            <div className="bg-zinc-700 p-4">
+              <h2 className="text-2xl font-semibold text-white">Final Standings</h2>
+            </div>
+            
+            <div className="p-6 space-y-3">
+              {gameState.leaderboard.map((name, idx) => (
+                <div 
+                  key={`${name}-${idx}`}
+                  className={`flex items-center p-4 rounded-lg transition-all duration-200 ${
+                    idx === 0 ? 'bg-yellow-500/20 border-2 border-yellow-500' : 'bg-zinc-700/50 hover:bg-zinc-600/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-600 text-white font-bold text-lg mr-4">
+                    {idx + 1}
+                  </div>
+                  <span className={`text-lg font-medium ${
+                    idx === 0 ? 'text-yellow-400' : 'text-white'
+                  }`}>
+                    {name}
+                  </span>
+                  {idx === 0 && (
+                    <span className="ml-auto bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-full">
+                      WINNER
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div className="p-4 bg-zinc-800/50 border-t border-zinc-700">
+              <button
+                onClick={() => window.location.href = "/"}
+                className="w-full bg-white hover:bg-gray-200 text-black font-bold py-3 px-6 rounded-lg transition-colors duration-200"
+              >
+                Back to Home
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );

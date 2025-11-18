@@ -3,6 +3,13 @@ export interface Player {
   name: string;
   cards: string[];
   socketId: string;
+  /**
+   * Indicates that the player has successfully played all their cards and
+   * is no longer taking part in the active rotation. A finished player can
+   * still be the target of a bluff call on their final move, but they will
+   * no longer receive turns.
+   */
+  finished?: boolean;
 }
 
 export interface GameRoom {
@@ -17,6 +24,10 @@ export interface GameRoom {
     claimedRank: string;
   } | null;
   passedPlayers: Set<string>;
+  /**
+   * Ordered list of player ids in the order they finished all their cards.
+   */
+  finishOrder: string[];
   gameStarted: boolean;
   hostId: string;
 }
