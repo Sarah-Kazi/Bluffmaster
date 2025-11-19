@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 
-export default function PlayEntryPage() {
+function PlayEntryPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [rickrolled, setRickrolled] = useState(searchParams.get("gotyou") === "1");
@@ -88,6 +88,14 @@ export default function PlayEntryPage() {
           ))}
         </div>
     </div>
+  );
+}
+
+export default function PlayEntryPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PlayEntryPageContent />
+    </Suspense>
   );
 }
 
