@@ -57,7 +57,7 @@ return (
               </div>
               <div className="flex items-start space-x-2">
                 <span className="text-white font-medium">2.</span>
-                <p>Declare what cards you're playing (you can bluff about the rank)</p>
+                <p>Declare what cards you are playing (you can bluff about the rank)</p>
               </div>
               <div className="flex items-start space-x-2">
                 <span className="text-white font-medium">2.</span>
@@ -65,7 +65,7 @@ return (
               </div>
               <div className="flex items-start space-x-2">
                 <span className="text-white font-medium">3.</span>
-                <p>Other players can challenge your claim if they think you're lying</p>
+                <p>Other players can challenge your claim if they think you are bluffing</p>
               </div>
               <div className="flex items-start space-x-2">
                 <span className="text-white font-medium">4.</span>
