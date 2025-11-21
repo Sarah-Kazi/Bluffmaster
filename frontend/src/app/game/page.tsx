@@ -393,7 +393,7 @@ function GameContent() {
             <p className="text-gray-400">
               Waiting for host to start the game...
               <br />
-              {gameState.players.length} player(s) in room
+              {gameState.players.length} player(s) in room. Atleast 2 players are required to start.
             </p>
           </div>
         )}
