@@ -2,15 +2,16 @@ import { Server, Socket } from 'socket.io';
 import { GameRoom, Player, JoinRoomData, PlayCardsData } from './types';
 import { distributeCards, getCardRank } from './deck';
 import { saveRoom, getRoom, deleteRoom } from './redis';
+import { Bot } from './bot';
 
 const rooms = new Map<string, GameRoom>();
 
 export function setupGameHandlers(io: Server, socket: Socket) {
   socket.on('join-room', async (data: JoinRoomData) => {
     const { roomCode, playerName } = data;
-    
+
     let room = rooms.get(roomCode);
-    
+
     if (!room) {
       const existingRoom = await getRoom(roomCode);
       if (existingRoom) {
@@ -55,11 +56,49 @@ export function setupGameHandlers(io: Server, socket: Socket) {
 
     room.players.push(player);
     socket.join(roomCode);
-    
+
     socket.emit('player-id', socket.id);
     io.to(roomCode).emit('room-joined', { players: getPlayerInfo(room) });
     io.to(roomCode).emit('game-state', getGameState(room));
-    
+
+    await saveRoom(room);
+    await saveRoom(room);
+  });
+
+  socket.on('add-bot', async (data: { roomCode: string }) => {
+    const { roomCode } = data;
+    const room = rooms.get(roomCode);
+
+    if (!room) {
+      socket.emit('error', 'Room not found');
+      return;
+    }
+
+    if (room.hostId !== socket.id) {
+      socket.emit('error', 'Only host can add bots');
+      return;
+    }
+
+    if (room.gameStarted) {
+      socket.emit('error', 'Game already started');
+      return;
+    }
+
+    const botId = `bot-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    const botName = `Bot ${room.players.length + 1}`;
+
+    const botPlayer: Player = {
+      id: botId,
+      name: botName,
+      cards: [],
+      socketId: 'bot', 
+    };
+
+    room.players.push(botPlayer);
+
+    io.to(roomCode).emit('room-joined', { players: getPlayerInfo(room) });
+    io.to(roomCode).emit('game-state', getGameState(room));
+
     await saveRoom(room);
   });
 
@@ -98,6 +137,11 @@ export function setupGameHandlers(io: Server, socket: Socket) {
 
     io.to(roomCode).emit('game-started');
     io.to(roomCode).emit('game-state', getGameState(room));
+
+    const firstPlayer = room.players[room.currentPlayerIndex];
+    if (firstPlayer.socketId === 'bot') {
+      setTimeout(() => processBotTurn(io, roomCode), 1000);
+    }
   });
 
   socket.on('play-cards', async (data: PlayCardsData) => {
@@ -129,12 +173,12 @@ export function setupGameHandlers(io: Server, socket: Socket) {
 
     currentPlayer.cards = currentPlayer.cards.filter(card => !cards.includes(card));
     room.pile.push(...cards);
-    
+
     // First player to play in a round sets the rank for that round
     if (!room.currentRank) {
       room.currentRank = claimedRank.toUpperCase();
     }
-    
+
     room.lastPlay = {
       playerId: currentPlayer.id,
       cards: cards,
@@ -179,21 +223,21 @@ export function setupGameHandlers(io: Server, socket: Socket) {
 
       // When a player finishes, check if we should end the game
       const activePlayers = room.players.filter(p => !p.finished);
-      
+
       // If only one or zero players remain, the game is over
       if (activePlayers.length <= 1) {
         room.gameStarted = false;
-        
+
         // Build the complete leaderboard
         const leaderboard = [...room.finishOrder];
-        
+
         // Add any remaining active players who haven't been added to finishOrder yet
         activePlayers.forEach(player => {
           if (!leaderboard.includes(player.id)) {
             leaderboard.push(player.id);
           }
         });
-        
+
         // Convert player IDs to names for the frontend
         const leaderboardNames = leaderboard
           .map(id => {
@@ -201,9 +245,15 @@ export function setupGameHandlers(io: Server, socket: Socket) {
             return player ? player.name : null;
           })
           .filter((name): name is string => name !== null);
-        
+
         console.log('Game over! Leaderboard:', leaderboardNames);
         io.to(roomCode).emit('game-over', { leaderboard: leaderboardNames });
+      }
+    } else {
+      // Check if next player is bot
+      const nextPlayer = room.players[room.currentPlayerIndex];
+      if (nextPlayer.socketId === 'bot' && room.gameStarted) {
+        setTimeout(() => processBotTurn(io, roomCode), 1500);
       }
     }
   });
@@ -230,7 +280,7 @@ export function setupGameHandlers(io: Server, socket: Socket) {
     }
 
     // Players can't call bluff on themselves
-    // Players can call bluff on themselves *only* if they just emptied their hand (edge case)
+
     if (caller.id === lastPlayer.id && !lastPlayer.finished) {
       socket.emit('error', 'Cannot call bluff on your own play');
       return;
@@ -285,6 +335,12 @@ export function setupGameHandlers(io: Server, socket: Socket) {
 
     io.to(penalizedPlayer.socketId).emit('your-cards', penalizedPlayer.cards);
     io.to(roomCode).emit('game-state', getGameState(room));
+
+    // Check if next player is bot
+    const nextPlayer = room.players[room.currentPlayerIndex];
+    if (nextPlayer.socketId === 'bot' && room.gameStarted) {
+      setTimeout(() => processBotTurn(io, roomCode), 1500);
+    }
   });
 
   socket.on('pass', async (data: { roomCode: string }) => {
@@ -311,7 +367,7 @@ export function setupGameHandlers(io: Server, socket: Socket) {
 
     io.to(roomCode).emit('player-passed', { playerName: currentPlayer.name });
 
-    // If every other *active* player except current has passed
+    // If every other active player except current has passed
     const activePlayersCount = room.players.filter(p => !p.finished).length;
     if (room.passedPlayers.size === activePlayersCount - 1) {
       // If everyone else passed, current player starts fresh round
@@ -334,6 +390,12 @@ export function setupGameHandlers(io: Server, socket: Socket) {
 
     await saveRoom(room);
     io.to(roomCode).emit('game-state', getGameState(room));
+
+    // Check if next player is bot
+    const nextPlayer = room.players[room.currentPlayerIndex];
+    if (nextPlayer.socketId === 'bot' && room.gameStarted) {
+      setTimeout(() => processBotTurn(io, roomCode), 1500);
+    }
   });
 
   socket.on('disconnect', async () => {
@@ -341,7 +403,7 @@ export function setupGameHandlers(io: Server, socket: Socket) {
       const playerIndex = room.players.findIndex(p => p.socketId === socket.id);
       if (playerIndex !== -1) {
         room.players.splice(playerIndex, 1);
-        
+
         if (room.players.length === 0) {
           await deleteRoom(roomCode);
           rooms.delete(roomCode);
@@ -349,11 +411,11 @@ export function setupGameHandlers(io: Server, socket: Socket) {
           if (room.hostId === socket.id && room.players.length > 0) {
             room.hostId = room.players[0].socketId;
           }
-          
+
           if (room.gameStarted && room.currentPlayerIndex >= room.players.length) {
             room.currentPlayerIndex = 0;
           }
-          
+
           await saveRoom(room);
           io.to(roomCode).emit('game-state', getGameState(room));
         }
@@ -392,4 +454,174 @@ function getGameState(room: GameRoom) {
     winner: (!room.gameStarted && room.players.filter(p => !p.finished).length === 1 && room.players.some(p => p.finished)) ?
       room.players.find(p => !p.finished)?.name || null : null,
   };
+}
+
+async function processBotTurn(io: Server, roomCode: string) {
+  const room = rooms.get(roomCode);
+  if (!room || !room.gameStarted) return;
+
+  const currentPlayer = room.players[room.currentPlayerIndex];
+  if (currentPlayer.socketId !== 'bot') return; // Not a bot turn
+
+  const bot = new Bot(currentPlayer.id, currentPlayer.name);
+  const move = bot.makeMove(room);
+
+  console.log(`Bot ${currentPlayer.name} doing ${move.action}`);
+
+  if (move.action === 'play') {
+    const cards = move.cards!;
+    const claimedRank = move.claimedRank!;
+
+    currentPlayer.cards = currentPlayer.cards.filter(card => !cards.includes(card));
+    room.pile.push(...cards);
+
+    if (!room.currentRank) {
+      room.currentRank = claimedRank.toUpperCase();
+    }
+
+    room.lastPlay = {
+      playerId: currentPlayer.id,
+      cards: cards,
+      claimedRank: room.currentRank!,
+    };
+    room.passedPlayers.clear();
+
+    io.to(roomCode).emit('play-made', {
+      playerName: currentPlayer.name,
+      count: cards.length,
+      rank: claimedRank.toUpperCase(),
+    });
+
+    const playerEmptiedHand = currentPlayer.cards.length === 0;
+    if (playerEmptiedHand) {
+      currentPlayer.finished = true;
+      if (!room.finishOrder.includes(currentPlayer.id)) {
+        room.finishOrder.push(currentPlayer.id);
+      }
+    }
+
+    let nextIndex = (room.currentPlayerIndex + 1) % room.players.length;
+    let safety = 0;
+    while (room.players[nextIndex].finished && safety < room.players.length) {
+      nextIndex = (nextIndex + 1) % room.players.length;
+      safety++;
+    }
+    room.currentPlayerIndex = nextIndex;
+
+    await saveRoom(room);
+    // No need to emit 'your-cards' to bot
+    io.to(roomCode).emit('game-state', getGameState(room));
+
+    if (playerEmptiedHand) {
+      io.to(roomCode).emit('player-finished', { playerId: currentPlayer.id, playerName: currentPlayer.name });
+      io.to(roomCode).emit('round-ended', { starterName: room.players[room.currentPlayerIndex].name });
+
+      const activePlayers = room.players.filter(p => !p.finished);
+      if (activePlayers.length <= 1) {
+        room.gameStarted = false;
+        const leaderboard = [...room.finishOrder];
+        activePlayers.forEach(player => {
+          if (!leaderboard.includes(player.id)) leaderboard.push(player.id);
+        });
+
+        const leaderboardNames = leaderboard
+          .map(id => room.players.find(p => p.id === id)?.name)
+          .filter((n): n is string => !!n);
+
+        io.to(roomCode).emit('game-over', { leaderboard: leaderboardNames });
+        return; // Game over
+      }
+    }
+
+    // Check next player
+    const nextPlayer = room.players[room.currentPlayerIndex];
+    if (nextPlayer.socketId === 'bot' && room.gameStarted) {
+      setTimeout(() => processBotTurn(io, roomCode), 1500);
+    }
+
+  } else if (move.action === 'pass') {
+    room.passedPlayers.add(currentPlayer.id);
+    io.to(roomCode).emit('player-passed', { playerName: currentPlayer.name });
+
+    const activePlayersCount = room.players.filter(p => !p.finished).length;
+    if (room.passedPlayers.size === activePlayersCount - 1) {
+      room.currentRank = null;
+      room.pile = [];
+      room.lastPlay = null;
+      room.passedPlayers.clear();
+      io.to(roomCode).emit('round-ended', { starterName: currentPlayer.name });
+    } else {
+      let nextPassIdx = (room.currentPlayerIndex + 1) % room.players.length;
+      let guard = 0;
+      while (room.players[nextPassIdx].finished && guard < room.players.length) {
+        nextPassIdx = (nextPassIdx + 1) % room.players.length;
+        guard++;
+      }
+      room.currentPlayerIndex = nextPassIdx;
+    }
+
+    await saveRoom(room);
+    io.to(roomCode).emit('game-state', getGameState(room));
+
+    const nextPlayer = room.players[room.currentPlayerIndex];
+    if (nextPlayer.socketId === 'bot' && room.gameStarted) {
+      setTimeout(() => processBotTurn(io, roomCode), 1500);
+    }
+
+  } else if (move.action === 'call-bluff') {
+
+
+    const lastPlayerId = room.lastPlay!.playerId;
+    const lastPlayer = room.players.find(p => p.id === lastPlayerId)!;
+
+    const claimedRank = room.lastPlay!.claimedRank;
+    const actualCards = room.lastPlay!.cards;
+    const wasBluff = !actualCards.every(card => getCardRank(card) === claimedRank);
+
+    let penalizedPlayer: Player;
+    if (wasBluff) {
+      penalizedPlayer = lastPlayer;
+    } else {
+      penalizedPlayer = currentPlayer; 
+    }
+
+    penalizedPlayer.cards.push(...room.pile);
+    room.pile = [];
+    room.lastPlay = null;
+    room.currentRank = null;
+    room.passedPlayers.clear();
+
+    const winnerIndex = room.players.findIndex(p => p.id === (wasBluff ? currentPlayer.id : lastPlayer.id));
+
+    if (penalizedPlayer.cards.length > 0) {
+      penalizedPlayer.finished = false;
+      const idxInFinish = room.finishOrder.indexOf(penalizedPlayer.id);
+      if (idxInFinish !== -1) room.finishOrder.splice(idxInFinish, 1);
+    }
+
+    room.currentPlayerIndex = winnerIndex;
+    let rotateSafe = 0;
+    while (room.players[room.currentPlayerIndex].finished && rotateSafe < room.players.length) {
+      room.currentPlayerIndex = (room.currentPlayerIndex + 1) % room.players.length;
+      rotateSafe++;
+    }
+
+    io.to(roomCode).emit('bluff-called', {
+      callerName: currentPlayer.name,
+      lastPlayerName: lastPlayer.name,
+      wasBluff,
+      penalizedPlayerName: penalizedPlayer.name,
+    });
+
+    await saveRoom(room);
+    if (penalizedPlayer.socketId !== 'bot') {
+      io.to(penalizedPlayer.socketId).emit('your-cards', penalizedPlayer.cards);
+    }
+    io.to(roomCode).emit('game-state', getGameState(room));
+
+    const nextPlayer = room.players[room.currentPlayerIndex];
+    if (nextPlayer.socketId === 'bot' && room.gameStarted) {
+      setTimeout(() => processBotTurn(io, roomCode), 1500);
+    }
+  }
 }

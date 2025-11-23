@@ -31,7 +31,17 @@ export default function Home() {
     router.push(`/game?room=${roomCode.toUpperCase()}&name=${encodeURIComponent(playerName)}`);
   };
 
-return (
+  const startSinglePlayer = () => {
+    if (!playerName.trim()) {
+      alert("Please enter your name");
+      return;
+    }
+    setIsCreating(true);
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    router.push(`/game?room=${code}&name=${encodeURIComponent(playerName)}&host=true&singleplayer=true`);
+  };
+
+  return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-5xl space-y-8">
         <div className="text-center">
@@ -42,14 +52,14 @@ return (
         <div className="grid grid-cols-2 gap-6">
           <div className="bg-zinc-900 rounded-lg p-6 space-y-4 h-full">
             <h2 className="text-lg font-semibold text-white mb-3 text-center">Game Rules</h2>
-                <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-zinc-700"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-zinc-900 text-gray-400"></span>
-                </div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-zinc-700"></div>
               </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-zinc-900 text-gray-400"></span>
+              </div>
+            </div>
             <div className="space-y-3 text-base text-gray-300">
               <div className="flex items-start space-x-2">
                 <span className="text-white font-medium">1.</span>
@@ -73,6 +83,10 @@ return (
               </div>
               <div className="flex items-start space-x-2">
                 <span className="text-white font-medium">5.</span>
+                <p>In case everyone passes, the person who passed first, gets to start the new hand.</p>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-white font-medium">5.</span>
                 <p>First player to get rid of all their cards wins :D</p>
               </div>
             </div>
@@ -81,7 +95,7 @@ return (
           <div className="bg-zinc-900 rounded-lg p-6 space-y-4 h-full">
             <div>
               <h2 className="text-lg font-semibold text-white mb-3 text-center">Play :D</h2>
-                <div className="relative">
+              <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-zinc-700"></div>
                 </div>
@@ -107,6 +121,14 @@ return (
                 className="w-full py-3 bg-white text-black font-medium rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
               >
                 Create New Game
+              </button>
+
+              <button
+                onClick={startSinglePlayer}
+                disabled={isCreating}
+                className="w-full py-3 bg-white text-black font-medium rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Play against Bot 
               </button>
 
               <div className="relative">
