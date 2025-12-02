@@ -36,11 +36,12 @@ function GameContent() {
   const searchParams = useSearchParams();
   const roomCode = searchParams.get("room");
   const playerName = searchParams.get("name");
-  const isHost = searchParams.get("host") === "true";
+  const initialIsHost = searchParams.get("host") === "true";
   const isSinglePlayer = searchParams.get("singleplayer") === "true";
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
+  const [isHost, setIsHost] = useState(initialIsHost);
   const [myCards, setMyCards] = useState<string[]>([]);
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [gameState, setGameState] = useState<GameState>({
@@ -78,6 +79,10 @@ function GameContent() {
 
     newSocket.on("player-id", (playerId: string) => {
       setMyPlayerId(playerId);
+    });
+
+    newSocket.on("host-status", (data: { isHost: boolean }) => {
+      setIsHost(data.isHost);
     });
 
     newSocket.on("room-joined", (data: { players: Player[] }) => {
@@ -118,6 +123,15 @@ function GameContent() {
         leaderboard: data.leaderboard,
         gameStarted: false
       }));
+    });
+
+    newSocket.on("host-changed", (data: { newHostId: string, newHostName: string }) => {
+      if (newSocket.id && data.newHostId === newSocket.id) {
+        setIsHost(true);
+        addLog(`You are now the host`);
+      } else {
+        addLog(`${data.newHostName} is now the host`);
+      }
     });
 
     newSocket.on("error", (error: string) => {

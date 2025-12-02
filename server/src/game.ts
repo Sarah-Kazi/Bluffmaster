@@ -58,6 +58,10 @@ export function setupGameHandlers(io: Server, socket: Socket) {
     socket.join(roomCode);
 
     socket.emit('player-id', socket.id);
+
+    const isHost = room.hostId === socket.id;
+    socket.emit('host-status', { isHost });
+
     io.to(roomCode).emit('room-joined', { players: getPlayerInfo(room) });
     io.to(roomCode).emit('game-state', getGameState(room));
 
@@ -361,16 +365,38 @@ export function setupGameHandlers(io: Server, socket: Socket) {
 
     io.to(roomCode).emit('player-passed', { playerName: currentPlayer.name });
 
-    // If every other active player except current has passed
     const activePlayersCount = room.players.filter(p => !p.finished).length;
-    if (room.passedPlayers.size === activePlayersCount - 1) {
-      // If everyone else passed, current player starts fresh round
+    if (room.passedPlayers.size === activePlayersCount - 1 || activePlayersCount === 1) {
       room.currentRank = null;
       room.pile = [];
       room.lastPlay = null;
       room.passedPlayers.clear();
 
       io.to(roomCode).emit('round-ended', { starterName: currentPlayer.name });
+
+      // Check if game should end after round ends
+      if (activePlayersCount <= 1) {
+        room.gameStarted = false;
+
+        const leaderboard = [...room.finishOrder];
+        room.players.filter(p => !p.finished).forEach(player => {
+          if (!leaderboard.includes(player.id)) {
+            leaderboard.push(player.id);
+          }
+        });
+
+        const leaderboardNames = leaderboard
+          .map(id => {
+            const player = room.players.find(p => p.id === id);
+            return player ? player.name : null;
+          })
+          .filter((name): name is string => name !== null);
+
+        console.log('Game over! Leaderboard:', leaderboardNames);
+        io.to(roomCode).emit('game-over', { leaderboard: leaderboardNames });
+        await saveRoom(room);
+        return;
+      }
     } else {
       // Move to next active player
       let nextPassIdx = (room.currentPlayerIndex + 1) % room.players.length;
@@ -403,7 +429,12 @@ export function setupGameHandlers(io: Server, socket: Socket) {
           rooms.delete(roomCode);
         } else {
           if (room.hostId === socket.id && room.players.length > 0) {
-            room.hostId = room.players[0].socketId;
+            const newHost = room.players[0];
+            room.hostId = newHost.socketId;
+            io.to(roomCode).emit('host-changed', {
+              newHostId: newHost.id,
+              newHostName: newHost.name
+            });
           }
 
           if (room.gameStarted && room.currentPlayerIndex >= room.players.length) {
@@ -441,7 +472,7 @@ function getGameState(room: GameRoom) {
       rank: room.lastPlay.claimedRank,
     } : null,
     canCallBluff: room.lastPlay !== null,
-    canPass: room.currentRank !== null && room.passedPlayers.size < room.players.filter(p => !p.finished).length - 1,
+    canPass: room.currentRank !== null,
     roundEnded: room.currentRank === null && room.pile.length === 0 && room.gameStarted,
     gameStarted: room.gameStarted,
     // Only declare a winner after the game actually started and at least one player has finished
