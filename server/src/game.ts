@@ -91,7 +91,7 @@ export function setupGameHandlers(io: Server, socket: Socket) {
       id: botId,
       name: botName,
       cards: [],
-      socketId: 'bot', 
+      socketId: 'bot',
     };
 
     room.players.push(botPlayer);
@@ -213,48 +213,17 @@ export function setupGameHandlers(io: Server, socket: Socket) {
     await saveRoom(room);
     io.to(currentPlayer.socketId).emit('your-cards', currentPlayer.cards);
 
-    // Broadcast game state – include potential winner but keep game running
+    // Broadcast game state
     io.to(roomCode).emit('game-state', getGameState(room));
 
     if (playerEmptiedHand) {
       io.to(roomCode).emit('player-finished', { playerId: currentPlayer.id, playerName: currentPlayer.name });
-      // Notify all players that the round has ended due to a player finishing
-      io.to(roomCode).emit('round-ended', { starterName: room.players[room.currentPlayerIndex].name });
+    }
 
-      // When a player finishes, check if we should end the game
-      const activePlayers = room.players.filter(p => !p.finished);
-
-      // If only one or zero players remain, the game is over
-      if (activePlayers.length <= 1) {
-        room.gameStarted = false;
-
-        // Build the complete leaderboard
-        const leaderboard = [...room.finishOrder];
-
-        // Add any remaining active players who haven't been added to finishOrder yet
-        activePlayers.forEach(player => {
-          if (!leaderboard.includes(player.id)) {
-            leaderboard.push(player.id);
-          }
-        });
-
-        // Convert player IDs to names for the frontend
-        const leaderboardNames = leaderboard
-          .map(id => {
-            const player = room.players.find(p => p.id === id);
-            return player ? player.name : null;
-          })
-          .filter((name): name is string => name !== null);
-
-        console.log('Game over! Leaderboard:', leaderboardNames);
-        io.to(roomCode).emit('game-over', { leaderboard: leaderboardNames });
-      }
-    } else {
-      // Check if next player is bot
-      const nextPlayer = room.players[room.currentPlayerIndex];
-      if (nextPlayer.socketId === 'bot' && room.gameStarted) {
-        setTimeout(() => processBotTurn(io, roomCode), 1500);
-      }
+    // Check if next player is bot
+    const nextPlayer = room.players[room.currentPlayerIndex];
+    if (nextPlayer.socketId === 'bot' && room.gameStarted) {
+      setTimeout(() => processBotTurn(io, roomCode), 1500);
     }
   });
 
@@ -335,6 +304,31 @@ export function setupGameHandlers(io: Server, socket: Socket) {
 
     io.to(penalizedPlayer.socketId).emit('your-cards', penalizedPlayer.cards);
     io.to(roomCode).emit('game-state', getGameState(room));
+
+    // Check if game should end after bluff resolution
+    const activePlayers = room.players.filter(p => !p.finished);
+    if (activePlayers.length <= 1) {
+      room.gameStarted = false;
+
+      const leaderboard = [...room.finishOrder];
+      activePlayers.forEach(player => {
+        if (!leaderboard.includes(player.id)) {
+          leaderboard.push(player.id);
+        }
+      });
+
+      const leaderboardNames = leaderboard
+        .map(id => {
+          const player = room.players.find(p => p.id === id);
+          return player ? player.name : null;
+        })
+        .filter((name): name is string => name !== null);
+
+      console.log('Game over! Leaderboard:', leaderboardNames);
+      io.to(roomCode).emit('game-over', { leaderboard: leaderboardNames });
+      await saveRoom(room);
+      return;
+    }
 
     // Check if next player is bot
     const nextPlayer = room.players[room.currentPlayerIndex];
@@ -514,23 +508,6 @@ async function processBotTurn(io: Server, roomCode: string) {
 
     if (playerEmptiedHand) {
       io.to(roomCode).emit('player-finished', { playerId: currentPlayer.id, playerName: currentPlayer.name });
-      io.to(roomCode).emit('round-ended', { starterName: room.players[room.currentPlayerIndex].name });
-
-      const activePlayers = room.players.filter(p => !p.finished);
-      if (activePlayers.length <= 1) {
-        room.gameStarted = false;
-        const leaderboard = [...room.finishOrder];
-        activePlayers.forEach(player => {
-          if (!leaderboard.includes(player.id)) leaderboard.push(player.id);
-        });
-
-        const leaderboardNames = leaderboard
-          .map(id => room.players.find(p => p.id === id)?.name)
-          .filter((n): n is string => !!n);
-
-        io.to(roomCode).emit('game-over', { leaderboard: leaderboardNames });
-        return; // Game over
-      }
     }
 
     // Check next player
@@ -582,7 +559,7 @@ async function processBotTurn(io: Server, roomCode: string) {
     if (wasBluff) {
       penalizedPlayer = lastPlayer;
     } else {
-      penalizedPlayer = currentPlayer; 
+      penalizedPlayer = currentPlayer;
     }
 
     penalizedPlayer.cards.push(...room.pile);
@@ -618,6 +595,31 @@ async function processBotTurn(io: Server, roomCode: string) {
       io.to(penalizedPlayer.socketId).emit('your-cards', penalizedPlayer.cards);
     }
     io.to(roomCode).emit('game-state', getGameState(room));
+
+    // Check if game should end after bluff resolution
+    const activePlayers = room.players.filter(p => !p.finished);
+    if (activePlayers.length <= 1) {
+      room.gameStarted = false;
+
+      const leaderboard = [...room.finishOrder];
+      activePlayers.forEach(player => {
+        if (!leaderboard.includes(player.id)) {
+          leaderboard.push(player.id);
+        }
+      });
+
+      const leaderboardNames = leaderboard
+        .map(id => {
+          const player = room.players.find(p => p.id === id);
+          return player ? player.name : null;
+        })
+        .filter((name): name is string => name !== null);
+
+      console.log('Game over! Leaderboard:', leaderboardNames);
+      io.to(roomCode).emit('game-over', { leaderboard: leaderboardNames });
+      await saveRoom(room);
+      return;
+    }
 
     const nextPlayer = room.players[room.currentPlayerIndex];
     if (nextPlayer.socketId === 'bot' && room.gameStarted) {

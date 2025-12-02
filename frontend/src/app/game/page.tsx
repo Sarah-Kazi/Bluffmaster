@@ -135,24 +135,18 @@ function GameContent() {
     };
   }, [roomCode, playerName]);
 
-  
+
   useEffect(() => {
     if (!socket || !connected || !isHost || !isSinglePlayer) return;
-
-    
     if (gameState.leaderboard && gameState.leaderboard.length > 0) return;
-
-   
     const timer = setTimeout(() => {
       if (gameState.players.length === 1) {
         socket.emit("add-bot", { roomCode });
-      } else if (gameState.players.length === 2 && !gameState.gameStarted) {
-        socket.emit("start-game", { roomCode });
       }
     }, 500);
-
     return () => clearTimeout(timer);
-  }, [socket, connected, isHost, isSinglePlayer, gameState.players.length, gameState.gameStarted, roomCode]);
+  }, [socket, connected, isHost, isSinglePlayer, gameState.players.length, roomCode]);
+
 
   const startGame = () => {
     if (socket) {
