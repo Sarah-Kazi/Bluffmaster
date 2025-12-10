@@ -9,11 +9,17 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@types/simple-peer": "^9.11.9",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.23.25",
     "lucide-react": "^0.553.0",
     "next": "14.2.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "socket.io-client": "^4.7.2"
+    "simple-peer": "^9.11.1",
+    "socket.io-client": "^4.7.2",
+    "tailwind-merge": "^3.4.0",
+    "use-sound": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.12",

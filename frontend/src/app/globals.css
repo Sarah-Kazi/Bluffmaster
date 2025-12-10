@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,6 +10,7 @@
     transform: translateY(24px);
     opacity: 0;
   }
+
   100% {
     transform: translateY(0);
     opacity: 1;
@@ -19,18 +22,201 @@
 }
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #0a1612;
+  --foreground: #f5f5f0;
+  --felt-texture: #0d5c2f;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Felt texture background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #0a1612 0%, #0d5c2f 50%, #0a1612 100%);
+  background-size: 400% 400%;
+  opacity: 0.95;
+  z-index: -2;
+}
+
+/* Subtle noise texture for felt effect */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, .05) 2px, rgba(0, 0, 0, .05) 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0, 0, 0, .05) 2px, rgba(0, 0, 0, .05) 4px);
+  opacity: 0.3;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Floating card suits animation */
+@keyframes float-suits {
+  0% {
+    transform: translateY(100vh) rotate(0deg);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.4;
+  }
+
+  90% {
+    opacity: 0.4;
+  }
+
+  100% {
+    transform: translateY(-100px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.card-suit-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.card-suit {
+  position: absolute;
+  font-size: 4rem;
+  opacity: 0;
+  animation: float-suits 20s linear infinite;
+  color: rgba(212, 175, 55, 0.3);
+  user-select: none;
+}
+
+.card-suit:nth-child(1) {
+  left: 10%;
+  animation-delay: 0s;
+  font-size: 5rem;
+}
+
+.card-suit:nth-child(2) {
+  left: 25%;
+  animation-delay: 5s;
+  font-size: 4.5rem;
+}
+
+.card-suit:nth-child(3) {
+  left: 40%;
+  animation-delay: 10s;
+  font-size: 4rem;
+}
+
+.card-suit:nth-child(4) {
+  left: 55%;
+  animation-delay: 15s;
+  font-size: 6rem;
+}
+
+.card-suit:nth-child(5) {
+  left: 70%;
+  animation-delay: 7s;
+  font-size: 5.5rem;
+}
+
+.card-suit:nth-child(6) {
+  left: 85%;
+  animation-delay: 12s;
+  font-size: 4.8rem;
+}
+
+
+@keyframes shimmer-spin {
+  0% {
+    background-position: 0% 50%;
+    transform: perspective(1000px) rotateY(0deg);
+  }
+
+  50% {
+    background-position: 100% 50%;
+    transform: perspective(1000px) rotateY(5deg);
+  }
+
+  100% {
+    background-position: 0% 50%;
+    transform: perspective(1000px) rotateY(0deg);
+  }
+}
+
+@keyframes glow-pulse {
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.3));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.8)) drop-shadow(0 0 50px rgba(212, 175, 55, 0.4));
+  }
+}
+
+.bluffmaster-title {
+  position: relative;
+  display: inline-block;
+  background: linear-gradient(90deg,
+      #d4af37 0%,
+      #f4e5a1 25%,
+      #d4af37 50%,
+      #f4e5a1 75%,
+      #d4af37 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.bluffmaster-title:hover {
+  animation: shimmer-spin 2s ease-in-out infinite, glow-pulse 2s ease-in-out infinite;
+  transform: perspective(1000px) rotateY(0deg);
+}
+
+
+.poker-panel {
+  background: rgba(15, 25, 20, 0.85);
+  border: 2px solid rgba(212, 175, 55, 0.3);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+
+.chip {
+  background: radial-gradient(circle at 30% 30%, #d4af37, #b8941f);
+  border: 3px solid #8b7220;
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  .felt-gradient {
+    background: radial-gradient(ellipse at center, #0d5c2f 0%, #0a1612 100%);
   }
 }
