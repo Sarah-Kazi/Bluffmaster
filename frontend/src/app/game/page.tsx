@@ -63,8 +63,9 @@ function GameContent() {
   const [myPlayerId, setMyPlayerId] = useState("");
   const [logs, setLogs] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+  const [isLogMinimized, setIsLogMinimized] = useState(false);
 
-    const [chatMessages, setChatMessages] = useState<Array<{id: string; playerName: string; text: string; timestamp: number}>>([]);
+  const [chatMessages, setChatMessages] = useState<Array<{ id: string; playerName: string; text: string; timestamp: number }>>([]);
   const { playCardSound, playButtonSound, playBluffSound, playWinSound } = useGameSounds();
 
   const addLog = (msg: string) => {
@@ -599,19 +600,30 @@ function GameContent() {
           )}
 
           {/* Game Log */}
-          <div className="fixed bottom-4 left-4 w-80 max-h-72 overflow-y-auto 
+          <div className={`fixed bottom-4 left-4 w-80 ${isLogMinimized ? 'max-h-fit' : 'max-h-72 overflow-y-auto'}
                         bg-poker-wood/95 backdrop-blur-md border-2 border-poker-gold/30
-                        text-white p-4 rounded-xl shadow-2xl pointer-events-none">
-            <h3 className="font-bold mb-3 text-poker-gold text-sm uppercase tracking-wider border-b border-poker-gold/30 pb-2">
-              Game Log
-            </h3>
-            <div className="space-y-2">
-              {logs.map((log, i) => (
-                <div key={i} className="text-sm border-l-2 border-poker-gold/50 pl-3 py-1 text-gray-200">
-                  {log}
-                </div>
-              ))}
+                        text-white p-4 rounded-xl shadow-2xl transition-all duration-300`}>
+            <div className="flex justify-between items-center mb-3 border-b border-poker-gold/30 pb-2 pointer-events-auto">
+              <h3 className="font-bold text-poker-gold text-sm uppercase tracking-wider">
+                Game Log
+              </h3>
+              <button
+                onClick={() => setIsLogMinimized(!isLogMinimized)}
+                className="text-poker-gold hover:text-poker-gold-dark transition-colors duration-200 font-bold text-lg"
+                title={isLogMinimized ? "Maximize log" : "Minimize log"}
+              >
+                {isLogMinimized ? '▲' : '▼'}
+              </button>
             </div>
+            {!isLogMinimized && (
+              <div className="space-y-2 pointer-events-none">
+                {logs.map((log, i) => (
+                  <div key={i} className="text-sm border-l-2 border-poker-gold/50 pl-3 py-1 text-gray-200">
+                    {log}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
