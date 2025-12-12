@@ -419,35 +419,33 @@ function GameContent() {
             </div>
           </div>
 
-          {/* Main Content with Two Sidebars */}
+          {/* Main Content with Right Sidebar */}
           <div className="flex gap-3">
-            {/* Left Sidebar - Players */}
-            <div className="w-60 flex-shrink-0">
-              <div className="poker-panel rounded-xl p-4 backdrop-blur-sm h-full flex flex-col overflow-hidden">
-                <h3 className="font-bold text-poker-gold text-sm uppercase tracking-wider mb-3 border-b border-poker-gold/30 pb-2">
-                  Players
-                </h3>
-                <div className="space-y-2 overflow-y-auto poker-scrollbar flex-1">
+            {/* Main Game Area - Center */}
+            <div className="flex-1 space-y-3">
+              {/* Players - Top Horizontal Scroll */}
+              <div className="poker-panel rounded-xl p-4 backdrop-blur-sm overflow-x-auto">
+                <div className="flex gap-4 min-w-min">
                   {gameState.players.map((player, index) => (
                     <div
                       key={player.id}
-                      className={`rounded-lg p-3 transition-all duration-300
+                      className={`rounded-lg p-3 min-w-[200px] transition-all duration-300 flex-shrink-0
                                 ${index === gameState.currentPlayerIndex
-                          ? "bg-poker-gold/20 border-2 border-poker-gold"
+                          ? "bg-poker-gold/20 border-2 border-poker-gold scale-105"
                           : "bg-poker-wood/30 border-2 border-poker-gold/20"
                         }`}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="font-semibold text-white">{player.name}</div>
-                        <div className="flex items-center gap-2">
-                          <div className="chip w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-poker-wood">
-                            {player.cardCount}
-                          </div>
+                        <div className="font-semibold text-white truncate max-w-[120px]" title={player.name}>
+                          {player.name}
+                        </div>
+                        <div className="chip w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-poker-wood flex-shrink-0">
+                          {player.cardCount}
                         </div>
                       </div>
 
                       {index === gameState.currentPlayerIndex && gameState.gameStarted && (
-                        <div className="mt-2 text-xs text-poker-gold font-semibold uppercase tracking-wide">
+                        <div className="mt-2 text-xs text-poker-gold font-semibold uppercase tracking-wide text-center">
                           Active Turn
                         </div>
                       )}
@@ -455,10 +453,7 @@ function GameContent() {
                   ))}
                 </div>
               </div>
-            </div>
 
-            {/* Main Game Area - Center */}
-            <div className="flex-1 space-y-3">
               {gameState.gameStarted && (
                 <>
                   {/* Central Pile */}
