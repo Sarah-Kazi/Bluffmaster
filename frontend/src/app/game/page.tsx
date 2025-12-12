@@ -609,7 +609,7 @@ function GameContent() {
                           <img
                             src={getCardImageUrl(card)}
                             alt={card}
-                            className="w-20 h-28 md:w-24 md:h-36 rounded-lg shadow-md"
+                            className="w-[4.25rem] h-[6.25rem] md:w-[5.25rem] md:h-[7.75rem] rounded-lg shadow-md"
                           />
                         </button>
                       ))}
