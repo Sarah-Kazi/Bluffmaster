@@ -370,23 +370,23 @@ function GameContent() {
       <div className="min-h-screen p-2 md:p-3 relative z-10">
         <div className="max-w-[1920px] mx-auto">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 
-                        poker-panel rounded-xl p-4 backdrop-blur-sm mb-3">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2 
+                        poker-panel rounded-xl p-2 backdrop-blur-sm mb-2">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-display font-bold text-poker-gold">
+              <h1 className="text-xl font-display font-bold text-poker-gold">
                 Room: {roomCode}
               </h1>
               <button
                 onClick={copyRoomCode}
-                className="p-2 rounded-lg bg-poker-wood hover:bg-poker-wood-light 
+                className="p-1.5 rounded-lg bg-poker-wood hover:bg-poker-wood-light 
                          border border-poker-gold/30 hover:border-poker-gold
                          transition-all duration-200"
                 title="Copy room code"
               >
                 {copied ? (
-                  <span className="text-green-400 text-sm font-semibold">Copied!</span>
+                  <span className="text-green-400 text-xs font-semibold">Copied!</span>
                 ) : (
-                  <Copy className="w-4 h-4 text-poker-gold" />
+                  <Copy className="w-3 h-3 text-poker-gold" />
                 )}
               </button>
             </div>
@@ -395,8 +395,8 @@ function GameContent() {
               {isHost && !gameState.gameStarted && gameState.players.length >= 2 && (
                 <button
                   onClick={startGame}
-                  className="px-6 py-2.5 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
-                           font-bold rounded-lg btn-poker
+                  className="px-4 py-1.5 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
+                           font-bold rounded-lg btn-poker text-sm
                            border-2 border-poker-wood hover:scale-105
                            transition-all duration-200 shadow-lg"
                 >
@@ -408,44 +408,44 @@ function GameContent() {
                   if (socket) socket.disconnect();
                   window.location.href = "/";
                 }}
-                className="px-5 py-2.5 bg-poker-burgundy hover:bg-poker-burgundy-dark text-white 
-                         font-semibold rounded-lg btn-poker flex items-center gap-2
+                className="px-4 py-1.5 bg-poker-burgundy hover:bg-poker-burgundy-dark text-white 
+                         font-semibold rounded-lg btn-poker flex items-center gap-2 text-sm
                          border-2 border-poker-gold/30 hover:border-poker-gold
                          transition-all duration-200"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3 h-3" />
                 Leave
               </button>
             </div>
           </div>
 
           {/* Main Content with Right Sidebar */}
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             {/* Main Game Area - Center */}
-            <div className="flex-1 space-y-3">
+            <div className="flex-1 space-y-2">
               {/* Players - Top Horizontal Scroll */}
-              <div className="poker-panel rounded-xl p-4 backdrop-blur-sm overflow-x-auto">
-                <div className="flex gap-4 min-w-min">
+              <div className="poker-panel rounded-xl p-2 backdrop-blur-sm overflow-x-auto">
+                <div className="flex gap-2 min-w-min">
                   {gameState.players.map((player, index) => (
                     <div
                       key={player.id}
-                      className={`rounded-lg p-3 min-w-[200px] transition-all duration-300 flex-shrink-0
+                      className={`rounded-lg p-2 min-w-[160px] transition-all duration-300 flex-shrink-0
                                 ${index === gameState.currentPlayerIndex
                           ? "bg-poker-gold/20 border-2 border-poker-gold scale-105"
                           : "bg-poker-wood/30 border-2 border-poker-gold/20"
                         }`}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="font-semibold text-white truncate max-w-[120px]" title={player.name}>
+                        <div className="font-semibold text-white truncate max-w-[100px] text-sm" title={player.name}>
                           {player.name}
                         </div>
-                        <div className="chip w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-poker-wood flex-shrink-0">
+                        <div className="chip w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-poker-wood flex-shrink-0">
                           {player.cardCount}
                         </div>
                       </div>
 
                       {index === gameState.currentPlayerIndex && gameState.gameStarted && (
-                        <div className="mt-2 text-xs text-poker-gold font-semibold uppercase tracking-wide text-center">
+                        <div className="mt-1 text-[10px] text-poker-gold font-semibold uppercase tracking-wide text-center">
                           Active Turn
                         </div>
                       )}
@@ -457,27 +457,27 @@ function GameContent() {
               {gameState.gameStarted && (
                 <>
                   {/* Central Pile */}
-                  <div className="poker-panel rounded-2xl p-4 text-center backdrop-blur-sm 
+                  <div className="poker-panel rounded-xl p-2 text-center backdrop-blur-sm 
                                 border-poker-gold shadow-xl">
-                    <div className="space-y-3">
-                      <div className="text-sm uppercase tracking-widest text-gray-400 font-semibold">
+                    <div className="space-y-1">
+                      <div className="text-xs uppercase tracking-widest text-gray-400 font-semibold">
                         Central Pile
                       </div>
                       <div className="flex items-center justify-center gap-2">
-                        <div className="chip w-20 h-20 rounded-full flex items-center justify-center">
-                          <span className="text-3xl font-bold text-poker-wood">{gameState.pileCount}</span>
+                        <div className="chip w-16 h-16 rounded-full flex items-center justify-center">
+                          <span className="text-2xl font-bold text-poker-wood">{gameState.pileCount}</span>
                         </div>
                         <div className="text-left">
-                          <div className="text-gray-400 text-sm">Cards</div>
+                          <div className="text-gray-400 text-xs">Cards</div>
                           {gameState.currentRank && (
-                            <div className="text-2xl font-bold text-poker-gold">
+                            <div className="text-xl font-bold text-poker-gold">
                               Rank: {gameState.currentRank}
                             </div>
                           )}
                         </div>
                       </div>
                       {gameState.lastPlay && (
-                        <div className="text-sm text-gray-300 mt-3 p-3 bg-poker-wood/50 rounded-lg border border-poker-gold/20">
+                        <div className="text-xs text-gray-300 mt-1 p-2 bg-poker-wood/50 rounded-lg border border-poker-gold/20">
                           <span className="text-poker-gold font-semibold">{gameState.lastPlay.playerName}</span>
                           {" "}played{" "}
                           <span className="text-white font-bold">{gameState.lastPlay.count}</span>
@@ -494,8 +494,8 @@ function GameContent() {
                     <div className="flex justify-center">
                       <button
                         onClick={callBluff}
-                        className="px-12 py-4 bg-red-700 hover:bg-red-600 text-white 
-                                 font-bold text-xl rounded-xl btn-poker
+                        className="px-8 py-2 bg-red-700 hover:bg-red-600 text-white 
+                                 font-bold text-lg rounded-xl btn-poker
                                  border-2 border-red-900 hover:border-red-500
                                  shadow-xl hover:shadow-red-500/30
                                  transition-all duration-300 transform hover:scale-110 active:scale-95"
@@ -507,26 +507,26 @@ function GameContent() {
 
                   {/* Player Turn Controls */}
                   {isMyTurn() && (
-                    <div className="poker-panel rounded-xl p-4 space-y-4 backdrop-blur-sm 
+                    <div className="poker-panel rounded-xl p-2 space-y-2 backdrop-blur-sm 
                                   border-poker-gold shadow-lg animate-pulse-glow">
                       <div className="text-center">
-                        <span className="inline-block px-6 py-2 bg-poker-gold text-poker-wood 
-                                       font-bold text-lg rounded-full">
+                        <span className="inline-block px-4 py-1 bg-poker-gold text-poker-wood 
+                                       font-bold text-sm rounded-full">
                           YOUR TURN
                         </span>
                       </div>
 
                       {!gameState.roundEnded && gameState.currentRank && (
-                        <div className="space-y-4">
+                        <div className="space-y-2">
                           <div className="flex flex-wrap gap-2 justify-center items-center">
-                            <div className="text-xl font-semibold text-poker-gold">
+                            <div className="text-lg font-semibold text-poker-gold">
                               Playing: {gameState.currentRank}
                             </div>
                             <button
                               onClick={playCards}
                               disabled={selectedCards.length === 0}
-                              className="px-8 py-3 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
-                                       font-bold text-lg rounded-lg btn-poker
+                              className="px-6 py-2 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
+                                       font-bold text-sm rounded-lg btn-poker
                                        disabled:opacity-50 disabled:cursor-not-allowed
                                        border-2 border-poker-wood
                                        transition-all duration-200 transform hover:scale-105 active:scale-95"
@@ -536,8 +536,8 @@ function GameContent() {
                             {gameState.canPass && (
                               <button
                                 onClick={pass}
-                                className="px-8 py-3 bg-poker-wood-light hover:bg-poker-wood text-white 
-                                         font-semibold text-lg rounded-lg btn-poker
+                                className="px-6 py-2 bg-poker-wood-light hover:bg-poker-wood text-white 
+                                         font-semibold text-sm rounded-lg btn-poker
                                          border-2 border-poker-gold/30 hover:border-poker-gold
                                          transition-all duration-200"
                               >
@@ -550,8 +550,8 @@ function GameContent() {
                             <div className="flex justify-center">
                               <button
                                 onClick={callBluff}
-                                className="px-10 py-3 bg-red-700 hover:bg-red-600 text-white 
-                                         font-bold text-lg rounded-lg btn-poker
+                                className="px-8 py-2 bg-red-700 hover:bg-red-600 text-white 
+                                         font-bold text-sm rounded-lg btn-poker
                                          border-2 border-red-900 hover:border-red-500
                                          transition-all duration-300"
                               >
@@ -563,24 +563,24 @@ function GameContent() {
                       )}
 
                       {gameState.roundEnded && (
-                        <div className="text-center space-y-4">
-                          <p className="text-gray-300 text-lg">Start a new round</p>
+                        <div className="text-center space-y-2">
+                          <p className="text-gray-300 text-sm">Start a new round</p>
                           <div className="flex justify-center items-center gap-2">
                             <input
                               type="text"
                               value={claimedRank}
                               onChange={(e) => setClaimedRank(e.target.value.toUpperCase())}
-                              className="px-5 py-3 bg-poker-wood border-2 border-poker-gold/50 rounded-lg 
-                                       text-center text-2xl font-bold text-poker-gold uppercase
-                                       focus:outline-none focus:border-poker-gold focus:ring-2 focus:ring-poker-gold/30 w-full max-w-md"
-                              placeholder="Rank (A,K,Q,J,10,9,8,7,6,5,4,3,2)"
+                              className="px-3 py-2 bg-poker-wood border-2 border-poker-gold/50 rounded-lg 
+                                       text-center text-lg font-bold text-poker-gold uppercase
+                                       focus:outline-none focus:border-poker-gold focus:ring-2 focus:ring-poker-gold/30 w-full max-w-[200px]"
+                              placeholder="Rank (A,K...)"
                               maxLength={2}
                             />
                             <button
                               onClick={playCards}
                               disabled={selectedCards.length === 0}
-                              className="px-8 py-3 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
-                                       font-bold text-lg rounded-lg btn-poker
+                              className="px-6 py-2 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
+                                       font-bold text-sm rounded-lg btn-poker
                                        disabled:opacity-50 disabled:cursor-not-allowed
                                        border-2 border-poker-wood
                                        transition-all duration-200"
@@ -594,22 +594,22 @@ function GameContent() {
                   )}
 
                   {/* Player's Cards */}
-                  <div className="poker-panel rounded-xl p-4 backdrop-blur-sm">
-                    <div className="text-sm uppercase tracking-widest text-gray-400 font-semibold mb-2">
+                  <div className="poker-panel rounded-xl p-2 backdrop-blur-sm">
+                    <div className="text-xs uppercase tracking-widest text-gray-400 font-semibold mb-1">
                       Your Hand ({myCards.length} cards)
                     </div>
-                    <div className="flex flex-wrap gap-2 justify-center">
+                    <div className="flex flex-wrap gap-1 justify-center">
                       {sortCards(myCards).map((card, index) => (
                         <button
                           key={`${card}-${index}`}
                           onClick={() => toggleCardSelection(card)}
-                          className={`relative rounded-lg transition-all duration-200 ${selectedCards.includes(card) ? "ring-4 ring-poker-gold -translate-y-2" : ""
+                          className={`relative rounded-lg transition-all duration-200 ${selectedCards.includes(card) ? "ring-2 ring-poker-gold -translate-y-2" : ""
                             }`}
                         >
                           <img
                             src={getCardImageUrl(card)}
                             alt={card}
-                            className="w-16 h-[5.5rem] md:w-20 md:h-28 rounded-lg shadow-xl"
+                            className="w-14 h-[4.5rem] md:w-16 md:h-[5.5rem] rounded-lg shadow-md"
                           />
                         </button>
                       ))}
@@ -638,7 +638,7 @@ function GameContent() {
             </div>
 
             {/* Right Sidebar - Game Log (top half) and Chat (bottom half) */}
-            <div className="w-80 flex-shrink-0 space-y-3 flex flex-col" style={{ height: 'calc(100vh - 120px)' }}>
+            <div className="w-80 flex-shrink-0 space-y-2 flex flex-col" style={{ height: 'calc(100vh - 70px)' }}>
               {/* Game Log - Top Half of Right Sidebar */}
               <div className={`poker-panel rounded-xl p-4 backdrop-blur-sm flex-1 flex flex-col ${isLogMinimized ? '' : 'overflow-hidden'}`}>
                 <div className="flex justify-between items-center mb-3 border-b border-poker-gold/30 pb-2">
