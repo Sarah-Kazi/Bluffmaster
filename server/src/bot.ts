@@ -69,18 +69,23 @@ export class Bot {
   private shouldCallBluff(room: GameRoom, me: Player): boolean {
     if (!room.lastPlay) return false;
 
+    const lastPlayer = room.players.find(p => p.id === room.lastPlay?.playerId);
+    if (lastPlayer && lastPlayer.cards.length === 0) {
+      return true;
+    }
+
     const claimedRank = room.lastPlay.claimedRank;
     const cardsPlayed = room.lastPlay.cards.length;
 
-    if (cardsPlayed >= 3) return Math.random() > 0.5; 
+    if (cardsPlayed >= 3) return Math.random() > 0.5;
 
     const myCount = me.cards.filter(c => getCardRank(c) === claimedRank).length;
     const totalInDeck = 4;
     if (myCount + cardsPlayed > totalInDeck) {
-      return true; 
+      return true;
     }
 
-    return Math.random() < 0.1; 
+    return Math.random() < 0.1;
   }
 
   private findBestStartingPlay(cards: string[]): { cards: string[], rank: string } {
@@ -92,7 +97,7 @@ export class Bot {
     });
 
     const ranks = Object.keys(groups);
-    if (ranks.length === 0) return { cards: [], rank: 'A' }; 
+    if (ranks.length === 0) return { cards: [], rank: 'A' };
 
     const rankToPlay = ranks[0];
     return {

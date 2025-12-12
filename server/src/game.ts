@@ -418,6 +418,31 @@ export function setupGameHandlers(io: Server, socket: Socket) {
     }
   });
 
+  socket.on('chat-message', async (data: { roomCode: string, text: string }) => {
+    const { roomCode, text } = data;
+    const room = rooms.get(roomCode);
+
+    if (!room) {
+      socket.emit('error', 'Room not found');
+      return;
+    }
+
+    const player = room.players.find(p => p.socketId === socket.id);
+    if (!player) {
+      socket.emit('error', 'Player not found');
+      return;
+    }
+
+    const chatMessage = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      playerName: player.name,
+      text: text,
+      timestamp: Date.now(),
+    };
+
+    io.to(roomCode).emit('chat-message', chatMessage);
+  });
+
   socket.on('disconnect', async () => {
     for (const [roomCode, room] of rooms.entries()) {
       const playerIndex = room.players.findIndex(p => p.socketId === socket.id);
@@ -460,6 +485,9 @@ function getPlayerInfo(room: GameRoom) {
 }
 
 function getGameState(room: GameRoom) {
+  const activePlayersCount = room.players.filter(p => !p.finished).length;
+  const canPlayerPass = room.currentRank !== null && room.passedPlayers.size < activePlayersCount - 1;
+
   return {
     players: getPlayerInfo(room),
     currentPlayerIndex: room.currentPlayerIndex,
@@ -472,7 +500,7 @@ function getGameState(room: GameRoom) {
       rank: room.lastPlay.claimedRank,
     } : null,
     canCallBluff: room.lastPlay !== null,
-    canPass: room.currentRank !== null,
+    canPass: canPlayerPass,
     roundEnded: room.currentRank === null && room.pile.length === 0 && room.gameStarted,
     gameStarted: room.gameStarted,
     // Only declare a winner after the game actually started and at least one player has finished

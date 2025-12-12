@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { getCardImageUrl } from "@/utils/cardImages";
@@ -64,9 +64,27 @@ function GameContent() {
   const [logs, setLogs] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const [isLogMinimized, setIsLogMinimized] = useState(false);
+  const [chatInput, setChatInput] = useState("");
 
   const [chatMessages, setChatMessages] = useState<Array<{ id: string; playerName: string; text: string; timestamp: number }>>([]);
   const { playCardSound, playButtonSound, playBluffSound, playWinSound } = useGameSounds();
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+
+
+  useEffect(() => {
+    if (isAtBottom && chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages, isAtBottom]);
+
+  const handleChatScroll = () => {
+    if (chatContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      const atBottom = scrollHeight - scrollTop - clientHeight < 50;
+      setIsAtBottom(atBottom);
+    }
+  };
 
   const addLog = (msg: string) => {
     setLogs(prev => [msg, ...prev].slice(0, 50));
@@ -148,6 +166,10 @@ function GameContent() {
       }
     });
 
+    newSocket.on("chat-message", (data: { id: string, playerName: string, text: string, timestamp: number }) => {
+      setChatMessages(prev => [...prev, data]);
+    });
+
     newSocket.on("error", (error: string) => {
       alert(error);
     });
@@ -216,6 +238,13 @@ function GameContent() {
     if (socket) {
       socket.emit("pass", { roomCode });
       playButtonSound();
+    }
+  };
+
+  const sendChatMessage = () => {
+    if (socket && chatInput.trim()) {
+      socket.emit("chat-message", { roomCode, text: chatInput.trim() });
+      setChatInput("");
     }
   };
 
@@ -339,10 +368,10 @@ function GameContent() {
       </div>
 
       <div className="min-h-screen p-2 md:p-3 relative z-10">
-        <div className="max-w-7xl mx-auto space-y-3">
+        <div className="max-w-[1920px] mx-auto">
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 
-                        poker-panel rounded-xl p-4 backdrop-blur-sm">
+                        poker-panel rounded-xl p-4 backdrop-blur-sm mb-3">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-display font-bold text-poker-gold">
                 Room: {roomCode}
@@ -390,240 +419,314 @@ function GameContent() {
             </div>
           </div>
 
-          {/* Players */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {gameState.players.map((player, index) => (
-              <div
-                key={player.id}
-                className={`poker-panel rounded-xl p-4 backdrop-blur-sm transition-all duration-300
-                          ${index === gameState.currentPlayerIndex
-                    ? "border-poker-gold shadow-lg shadow-poker-gold/30 scale-105"
-                    : "border-poker-gold/20 hover:border-poker-gold/40"
-                  }`}
-              >
-                <div className="font-semibold text-white text-lg">{player.name}</div>
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="chip w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-poker-wood">
-                    {player.cardCount}
-                  </div>
-                  <span className="text-sm text-gray-300">cards</span>
-                </div>
-                {index === gameState.currentPlayerIndex && gameState.gameStarted && (
-                  <div className="mt-2 text-xs text-poker-gold font-semibold uppercase tracking-wide">
-                    Active
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {gameState.gameStarted && (
-            <>
-              {/* Central Pile */}
-              <div className="poker-panel rounded-2xl p-4 text-center backdrop-blur-sm 
-                            border-poker-gold shadow-xl">
-                <div className="space-y-3">
-                  <div className="text-sm uppercase tracking-widest text-gray-400 font-semibold">
-                    Central Pile
-                  </div>
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="chip w-20 h-20 rounded-full flex items-center justify-center">
-                      <span className="text-3xl font-bold text-poker-wood">{gameState.pileCount}</span>
-                    </div>
-                    <div className="text-left">
-                      <div className="text-gray-400 text-sm">Cards</div>
-                      {gameState.currentRank && (
-                        <div className="text-2xl font-bold text-poker-gold">
-                          Rank: {gameState.currentRank}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {gameState.lastPlay && (
-                    <div className="text-sm text-gray-300 mt-3 p-3 bg-poker-wood/50 rounded-lg border border-poker-gold/20">
-                      <span className="text-poker-gold font-semibold">{gameState.lastPlay.playerName}</span>
-                      {" "}played{" "}
-                      <span className="text-white font-bold">{gameState.lastPlay.count}</span>
-                      {" "}
-                      <span className="text-poker-gold font-semibold">{gameState.lastPlay.rank}</span>
-                      (s)
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Call Bluff Button (for non-active players) */}
-              {gameState.canCallBluff && gameState.lastPlay && gameState.lastPlay.playerId !== myPlayerId && !isMyTurn() && (
-                <div className="flex justify-center">
-                  <button
-                    onClick={callBluff}
-                    className="px-12 py-4 bg-red-700 hover:bg-red-600 text-white 
-                             font-bold text-xl rounded-xl btn-poker
-                             border-2 border-red-900 hover:border-red-500
-                             shadow-xl hover:shadow-red-500/30
-                             transition-all duration-300 transform hover:scale-110 active:scale-95"
-                  >
-                    CALL BLUFF
-                  </button>
-                </div>
-              )}
-
-              {/* Player Turn Controls */}
-              {isMyTurn() && (
-                <div className="poker-panel rounded-xl p-4 space-y-4 backdrop-blur-sm 
-                              border-poker-gold shadow-lg animate-pulse-glow">
-                  <div className="text-center">
-                    <span className="inline-block px-6 py-2 bg-poker-gold text-poker-wood 
-                                   font-bold text-lg rounded-full">
-                      YOUR TURN
-                    </span>
-                  </div>
-
-                  {!gameState.roundEnded && gameState.currentRank && (
-                    <div className="space-y-4">
-                      <div className="flex flex-wrap gap-2 justify-center items-center">
-                        <div className="text-xl font-semibold text-poker-gold">
-                          Playing: {gameState.currentRank}
-                        </div>
-                        <button
-                          onClick={playCards}
-                          disabled={selectedCards.length === 0}
-                          className="px-8 py-3 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
-                                   font-bold text-lg rounded-lg btn-poker
-                                   disabled:opacity-50 disabled:cursor-not-allowed
-                                   border-2 border-poker-wood
-                                   transition-all duration-200 transform hover:scale-105 active:scale-95"
-                        >
-                          Play {selectedCards.length} Card(s)
-                        </button>
-                        {gameState.canPass && (
-                          <button
-                            onClick={pass}
-                            className="px-8 py-3 bg-poker-wood-light hover:bg-poker-wood text-white 
-                                     font-semibold text-lg rounded-lg btn-poker
-                                     border-2 border-poker-gold/30 hover:border-poker-gold
-                                     transition-all duration-200"
-                          >
-                            Pass
-                          </button>
-                        )}
-                      </div>
-
-                      {gameState.canCallBluff && gameState.lastPlay && gameState.lastPlay.playerId !== myPlayerId && (
-                        <div className="flex justify-center">
-                          <button
-                            onClick={callBluff}
-                            className="px-10 py-3 bg-red-700 hover:bg-red-600 text-white 
-                                     font-bold text-lg rounded-lg btn-poker
-                                     border-2 border-red-900 hover:border-red-500
-                                     transition-all duration-300"
-                          >
-                            Call Bluff
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {gameState.roundEnded && (
-                    <div className="text-center space-y-4">
-                      <p className="text-gray-300 text-lg">Start a new round</p>
-                      <div className="flex justify-center items-center gap-2">
-                        <input
-                          type="text"
-                          value={claimedRank}
-                          onChange={(e) => setClaimedRank(e.target.value.toUpperCase())}
-                          className="px-5 py-3 bg-poker-wood border-2 border-poker-gold/50 rounded-lg 
-                                   text-center text-2xl font-bold text-poker-gold uppercase
-                                   focus:outline-none focus:border-poker-gold focus:ring-2 focus:ring-poker-gold/30 w-full max-w-md"
-                          placeholder="Rank (A,K,Q,J,10,9,8,7,6,5,4,3,2)"
-                          maxLength={2}
-                        />
-                        <button
-                          onClick={playCards}
-                          disabled={selectedCards.length === 0}
-                          className="px-8 py-3 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
-                                   font-bold text-lg rounded-lg btn-poker
-                                   disabled:opacity-50 disabled:cursor-not-allowed
-                                   border-2 border-poker-wood
-                                   transition-all duration-200"
-                        >
-                          Start Round
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Player's Cards */}
-              <div className="poker-panel rounded-xl p-4 backdrop-blur-sm">
-                <div className="text-sm uppercase tracking-widest text-gray-400 font-semibold mb-2">
-                  Your Hand ({myCards.length} cards)
-                </div>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {sortCards(myCards).map((card, index) => (
-                    <button
-                      key={`${card}-${index}`}
-                      onClick={() => toggleCardSelection(card)}
-                      className={`relative rounded-lg transition-all duration-200 ${selectedCards.includes(card) ? "ring-4 ring-poker-gold -translate-y-2" : ""
+          {/* Main Content with Two Sidebars */}
+          <div className="flex gap-3">
+            {/* Left Sidebar - Players */}
+            <div className="w-80 flex-shrink-0">
+              <div className="poker-panel rounded-xl p-4 backdrop-blur-sm h-full flex flex-col overflow-hidden">
+                <h3 className="font-bold text-poker-gold text-sm uppercase tracking-wider mb-3 border-b border-poker-gold/30 pb-2">
+                  Players
+                </h3>
+                <div className="space-y-2 overflow-y-auto poker-scrollbar flex-1">
+                  {gameState.players.map((player, index) => (
+                    <div
+                      key={player.id}
+                      className={`rounded-lg p-3 transition-all duration-300
+                                ${index === gameState.currentPlayerIndex
+                          ? "bg-poker-gold/20 border-2 border-poker-gold"
+                          : "bg-poker-wood/30 border-2 border-poker-gold/20"
                         }`}
                     >
-                      <img
-                        src={getCardImageUrl(card)}
-                        alt={card}
-                        className="w-20 h-28 md:w-24 md:h-32 rounded-lg shadow-xl"
-                      />
-                    </button>
+                      <div className="flex items-center justify-between">
+                        <div className="font-semibold text-white">{player.name}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="chip w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-poker-wood">
+                            {player.cardCount}
+                          </div>
+                        </div>
+                      </div>
+
+                      {index === gameState.currentPlayerIndex && gameState.gameStarted && (
+                        <div className="mt-2 text-xs text-poker-gold font-semibold uppercase tracking-wide">
+                          Active Turn
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
-            </>
-          )}
-
-          {/* Waiting for game to start */}
-          {!gameState.gameStarted && (
-            <div className="poker-panel rounded-2xl p-4 text-center backdrop-blur-sm">
-              <div className="space-y-4">
-                <div className="text-5xl text-poker-gold animate-float">♠</div>
-                <p className="text-gray-300 text-lg">
-                  Waiting for host to start the game...
-                </p>
-                <p className="text-poker-gold font-semibold">
-                  {gameState.players.length} player(s) in room
-                </p>
-                <p className="text-sm text-gray-400">
-                  At least 2 players required
-                </p>
-              </div>
             </div>
-          )}
 
-          {/* Game Log */}
-          <div className={`fixed bottom-4 left-4 w-80 ${isLogMinimized ? 'max-h-fit' : 'max-h-72 overflow-y-auto'}
-                        bg-poker-wood/95 backdrop-blur-md border-2 border-poker-gold/30
-                        text-white p-4 rounded-xl shadow-2xl transition-all duration-300`}>
-            <div className="flex justify-between items-center mb-3 border-b border-poker-gold/30 pb-2 pointer-events-auto">
-              <h3 className="font-bold text-poker-gold text-sm uppercase tracking-wider">
-                Game Log
-              </h3>
-              <button
-                onClick={() => setIsLogMinimized(!isLogMinimized)}
-                className="text-poker-gold hover:text-poker-gold-dark transition-colors duration-200 font-bold text-lg"
-                title={isLogMinimized ? "Maximize log" : "Minimize log"}
-              >
-                {isLogMinimized ? '▲' : '▼'}
-              </button>
-            </div>
-            {!isLogMinimized && (
-              <div className="space-y-2 pointer-events-none">
-                {logs.map((log, i) => (
-                  <div key={i} className="text-sm border-l-2 border-poker-gold/50 pl-3 py-1 text-gray-200">
-                    {log}
+            {/* Main Game Area - Center */}
+            <div className="flex-1 space-y-3">
+              {gameState.gameStarted && (
+                <>
+                  {/* Central Pile */}
+                  <div className="poker-panel rounded-2xl p-4 text-center backdrop-blur-sm 
+                                border-poker-gold shadow-xl">
+                    <div className="space-y-3">
+                      <div className="text-sm uppercase tracking-widest text-gray-400 font-semibold">
+                        Central Pile
+                      </div>
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="chip w-20 h-20 rounded-full flex items-center justify-center">
+                          <span className="text-3xl font-bold text-poker-wood">{gameState.pileCount}</span>
+                        </div>
+                        <div className="text-left">
+                          <div className="text-gray-400 text-sm">Cards</div>
+                          {gameState.currentRank && (
+                            <div className="text-2xl font-bold text-poker-gold">
+                              Rank: {gameState.currentRank}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {gameState.lastPlay && (
+                        <div className="text-sm text-gray-300 mt-3 p-3 bg-poker-wood/50 rounded-lg border border-poker-gold/20">
+                          <span className="text-poker-gold font-semibold">{gameState.lastPlay.playerName}</span>
+                          {" "}played{" "}
+                          <span className="text-white font-bold">{gameState.lastPlay.count}</span>
+                          {" "}
+                          <span className="text-poker-gold font-semibold">{gameState.lastPlay.rank}</span>
+                          (s)
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ))}
+
+                  {/* Call Bluff Button (for non-active players) */}
+                  {gameState.canCallBluff && gameState.lastPlay && gameState.lastPlay.playerId !== myPlayerId && !isMyTurn() && (
+                    <div className="flex justify-center">
+                      <button
+                        onClick={callBluff}
+                        className="px-12 py-4 bg-red-700 hover:bg-red-600 text-white 
+                                 font-bold text-xl rounded-xl btn-poker
+                                 border-2 border-red-900 hover:border-red-500
+                                 shadow-xl hover:shadow-red-500/30
+                                 transition-all duration-300 transform hover:scale-110 active:scale-95"
+                      >
+                        CALL BLUFF
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Player Turn Controls */}
+                  {isMyTurn() && (
+                    <div className="poker-panel rounded-xl p-4 space-y-4 backdrop-blur-sm 
+                                  border-poker-gold shadow-lg animate-pulse-glow">
+                      <div className="text-center">
+                        <span className="inline-block px-6 py-2 bg-poker-gold text-poker-wood 
+                                       font-bold text-lg rounded-full">
+                          YOUR TURN
+                        </span>
+                      </div>
+
+                      {!gameState.roundEnded && gameState.currentRank && (
+                        <div className="space-y-4">
+                          <div className="flex flex-wrap gap-2 justify-center items-center">
+                            <div className="text-xl font-semibold text-poker-gold">
+                              Playing: {gameState.currentRank}
+                            </div>
+                            <button
+                              onClick={playCards}
+                              disabled={selectedCards.length === 0}
+                              className="px-8 py-3 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
+                                       font-bold text-lg rounded-lg btn-poker
+                                       disabled:opacity-50 disabled:cursor-not-allowed
+                                       border-2 border-poker-wood
+                                       transition-all duration-200 transform hover:scale-105 active:scale-95"
+                            >
+                              Play {selectedCards.length} Card(s)
+                            </button>
+                            {gameState.canPass && (
+                              <button
+                                onClick={pass}
+                                className="px-8 py-3 bg-poker-wood-light hover:bg-poker-wood text-white 
+                                         font-semibold text-lg rounded-lg btn-poker
+                                         border-2 border-poker-gold/30 hover:border-poker-gold
+                                         transition-all duration-200"
+                              >
+                                Pass
+                              </button>
+                            )}
+                          </div>
+
+                          {gameState.canCallBluff && gameState.lastPlay && gameState.lastPlay.playerId !== myPlayerId && (
+                            <div className="flex justify-center">
+                              <button
+                                onClick={callBluff}
+                                className="px-10 py-3 bg-red-700 hover:bg-red-600 text-white 
+                                         font-bold text-lg rounded-lg btn-poker
+                                         border-2 border-red-900 hover:border-red-500
+                                         transition-all duration-300"
+                              >
+                                Call Bluff
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {gameState.roundEnded && (
+                        <div className="text-center space-y-4">
+                          <p className="text-gray-300 text-lg">Start a new round</p>
+                          <div className="flex justify-center items-center gap-2">
+                            <input
+                              type="text"
+                              value={claimedRank}
+                              onChange={(e) => setClaimedRank(e.target.value.toUpperCase())}
+                              className="px-5 py-3 bg-poker-wood border-2 border-poker-gold/50 rounded-lg 
+                                       text-center text-2xl font-bold text-poker-gold uppercase
+                                       focus:outline-none focus:border-poker-gold focus:ring-2 focus:ring-poker-gold/30 w-full max-w-md"
+                              placeholder="Rank (A,K,Q,J,10,9,8,7,6,5,4,3,2)"
+                              maxLength={2}
+                            />
+                            <button
+                              onClick={playCards}
+                              disabled={selectedCards.length === 0}
+                              className="px-8 py-3 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
+                                       font-bold text-lg rounded-lg btn-poker
+                                       disabled:opacity-50 disabled:cursor-not-allowed
+                                       border-2 border-poker-wood
+                                       transition-all duration-200"
+                            >
+                              Start Round
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Player's Cards */}
+                  <div className="poker-panel rounded-xl p-4 backdrop-blur-sm">
+                    <div className="text-sm uppercase tracking-widest text-gray-400 font-semibold mb-2">
+                      Your Hand ({myCards.length} cards)
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {sortCards(myCards).map((card, index) => (
+                        <button
+                          key={`${card}-${index}`}
+                          onClick={() => toggleCardSelection(card)}
+                          className={`relative rounded-lg transition-all duration-200 ${selectedCards.includes(card) ? "ring-4 ring-poker-gold -translate-y-2" : ""
+                            }`}
+                        >
+                          <img
+                            src={getCardImageUrl(card)}
+                            alt={card}
+                            className="w-20 h-28 md:w-24 md:h-32 rounded-lg shadow-xl"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Waiting for game to start */}
+              {!gameState.gameStarted && (
+                <div className="poker-panel rounded-2xl p-4 text-center backdrop-blur-sm">
+                  <div className="space-y-4">
+                    <div className="text-5xl text-poker-gold animate-float">♠</div>
+                    <p className="text-gray-300 text-lg">
+                      Waiting for host to start the game...
+                    </p>
+                    <p className="text-poker-gold font-semibold">
+                      {gameState.players.length} player(s) in room
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      At least 2 players required
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Sidebar - Game Log (top half) and Chat (bottom half) */}
+            <div className="w-80 flex-shrink-0 space-y-3 flex flex-col" style={{ height: 'calc(100vh - 120px)' }}>
+              {/* Game Log - Top Half of Right Sidebar */}
+              <div className={`poker-panel rounded-xl p-4 backdrop-blur-sm flex-1 flex flex-col ${isLogMinimized ? '' : 'overflow-hidden'}`}>
+                <div className="flex justify-between items-center mb-3 border-b border-poker-gold/30 pb-2">
+                  <h3 className="font-bold text-poker-gold text-sm uppercase tracking-wider">
+                    Game Log
+                  </h3>
+                  <button
+                    onClick={() => setIsLogMinimized(!isLogMinimized)}
+                    className="text-poker-gold hover:text-poker-gold-dark transition-colors duration-200 font-bold text-lg"
+                    title={isLogMinimized ? "Maximize log" : "Minimize log"}
+                  >
+                    {isLogMinimized ? '▲' : '▼'}
+                  </button>
+                </div>
+                {!isLogMinimized && (
+                  <div className="space-y-2 overflow-y-auto poker-scrollbar flex-1">
+                    {logs.map((log, i) => (
+                      <div key={i} className="text-sm border-l-2 border-poker-gold/50 pl-3 py-1 text-gray-200">
+                        {log}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Chat - Bottom Half of Right Sidebar */}
+              <div className="poker-panel rounded-xl p-4 backdrop-blur-sm flex-1 flex flex-col overflow-hidden">
+                <h3 className="font-bold text-poker-gold text-sm uppercase tracking-wider mb-3 border-b border-poker-gold/30 pb-2">
+                  Chat
+                </h3>
+
+                {/* Chat Messages */}
+                <div
+                  ref={chatContainerRef}
+                  onScroll={handleChatScroll}
+                  className="flex-1 space-y-2 mb-3 overflow-y-auto poker-scrollbar"
+                >
+                  {chatMessages.length === 0 ? (
+                    <div className="text-gray-400 text-xs text-center py-4">
+                      No messages yet
+                    </div>
+                  ) : (
+                    chatMessages.map((msg) => (
+                      <div key={msg.id} className="bg-poker-wood/30 rounded-lg p-2 border border-poker-gold/10">
+                        <div className="text-poker-gold text-xs font-semibold mb-1">{msg.playerName}</div>
+                        <div className="text-gray-200 text-sm">{msg.text}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Chat Input */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        sendChatMessage();
+                      }
+                    }}
+                    placeholder="Type a message..."
+                    className="flex-1 px-3 py-2 bg-poker-wood border border-poker-gold/30 rounded-lg 
+                             text-white text-sm placeholder-gray-400
+                             focus:outline-none focus:border-poker-gold focus:ring-1 focus:ring-poker-gold/30
+                             transition-all duration-200"
+                    maxLength={100}
+                  />
+                  <button
+                    onClick={sendChatMessage}
+                    disabled={!chatInput.trim()}
+                    className="px-4 py-2 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
+                             font-semibold text-sm rounded-lg btn-poker
+                             disabled:opacity-50 disabled:cursor-not-allowed
+                             border-2 border-poker-wood/50
+                             transition-all duration-200"
+                  >
+                    Send
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

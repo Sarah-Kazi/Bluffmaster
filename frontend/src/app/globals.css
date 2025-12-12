@@ -211,6 +211,26 @@ body::after {
     inset 0 2px 4px rgba(255, 255, 255, 0.3);
 }
 
+/* Custom Scrollbar Styling */
+.poker-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.poker-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 25, 20, 0.5);
+  border-radius: 4px;
+}
+
+.poker-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #d4af37 0%, #b8941f 100%);
+  border-radius: 4px;
+  border: 1px solid rgba(139, 114, 32, 0.5);
+}
+
+.poker-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #f4e5a1 0%, #d4af37 100%);
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
