@@ -422,7 +422,7 @@ function GameContent() {
           {/* Main Content with Two Sidebars */}
           <div className="flex gap-3">
             {/* Left Sidebar - Players */}
-            <div className="w-80 flex-shrink-0">
+            <div className="w-60 flex-shrink-0">
               <div className="poker-panel rounded-xl p-4 backdrop-blur-sm h-full flex flex-col overflow-hidden">
                 <h3 className="font-bold text-poker-gold text-sm uppercase tracking-wider mb-3 border-b border-poker-gold/30 pb-2">
                   Players
@@ -614,7 +614,7 @@ function GameContent() {
                           <img
                             src={getCardImageUrl(card)}
                             alt={card}
-                            className="w-20 h-28 md:w-24 md:h-32 rounded-lg shadow-xl"
+                            className="w-16 h-[5.5rem] md:w-20 md:h-28 rounded-lg shadow-xl"
                           />
                         </button>
                       ))}
@@ -689,7 +689,7 @@ function GameContent() {
                     chatMessages.map((msg) => (
                       <div key={msg.id} className="bg-poker-wood/30 rounded-lg p-2 border border-poker-gold/10">
                         <div className="text-poker-gold text-xs font-semibold mb-1">{msg.playerName}</div>
-                        <div className="text-gray-200 text-sm">{msg.text}</div>
+                        <div className="text-gray-200 text-sm break-words">{msg.text}</div>
                       </div>
                     ))
                   )}
