@@ -544,21 +544,20 @@ function GameContent() {
                                 Pass
                               </button>
                             )}
-                          </div>
-
-                          {gameState.canCallBluff && gameState.lastPlay && gameState.lastPlay.playerId !== myPlayerId && (
-                            <div className="flex justify-center">
+                            {gameState.canCallBluff && gameState.lastPlay && gameState.lastPlay.playerId !== myPlayerId && (
                               <button
                                 onClick={callBluff}
-                                className="px-8 py-2 bg-red-700 hover:bg-red-600 text-white 
+                                className="px-6 py-2 bg-red-700 hover:bg-red-600 text-white 
                                          font-bold text-sm rounded-lg btn-poker
                                          border-2 border-red-900 hover:border-red-500
                                          transition-all duration-300"
                               >
                                 Call Bluff
                               </button>
-                            </div>
-                          )}
+                            )}
+                          </div>
+
+
                         </div>
                       )}
 
@@ -572,8 +571,9 @@ function GameContent() {
                               onChange={(e) => setClaimedRank(e.target.value.toUpperCase())}
                               className="px-3 py-2 bg-poker-wood border-2 border-poker-gold/50 rounded-lg 
                                        text-center text-lg font-bold text-poker-gold uppercase
-                                       focus:outline-none focus:border-poker-gold focus:ring-2 focus:ring-poker-gold/30 w-full max-w-[200px]"
-                              placeholder="Rank (A,K...)"
+                                       focus:outline-none focus:border-poker-gold focus:ring-2 focus:ring-poker-gold/30 w-full max-w-[400px]
+                                       placeholder:text-xs placeholder:font-normal"
+                              placeholder="Rank (A,K,Q,J,10,9,8,7,6,5,4,3,2)"
                               maxLength={2}
                             />
                             <button
@@ -609,7 +609,7 @@ function GameContent() {
                           <img
                             src={getCardImageUrl(card)}
                             alt={card}
-                            className="w-14 h-[4.5rem] md:w-16 md:h-[5.5rem] rounded-lg shadow-md"
+                            className="w-20 h-28 md:w-24 md:h-36 rounded-lg shadow-md"
                           />
                         </button>
                       ))}
