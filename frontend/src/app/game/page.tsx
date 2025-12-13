@@ -4,7 +4,8 @@ import { useEffect, useState, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { getCardImageUrl } from "@/utils/cardImages";
-import { Copy, LogOut } from "lucide-react";
+import { Copy, LogOut, ChevronLeft, ChevronRight, Volume2, VolumeX } from "lucide-react";
+import YouTube from "react-youtube";
 import { useGameSounds } from "@/hooks/useGameSounds";
 
 interface Player {
@@ -32,6 +33,8 @@ interface GameState {
   leaderboard: string[];
   winner: string | null;
 }
+
+const BACKGROUND_MUSIC_ID = "PaFHwTjy1yE";
 
 function GameContent() {
   const searchParams = useSearchParams();
@@ -63,8 +66,10 @@ function GameContent() {
   const [myPlayerId, setMyPlayerId] = useState("");
   const [logs, setLogs] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
-  const [isLogMinimized, setIsLogMinimized] = useState(false);
   const [chatInput, setChatInput] = useState("");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMusicMuted, setIsMusicMuted] = useState(false);
+  const musicPlayerRef = useRef<any>(null);
 
   const [chatMessages, setChatMessages] = useState<Array<{ id: string; playerName: string; text: string; timestamp: number }>>([]);
   const { playCardSound, playButtonSound, playBluffSound, playWinSound } = useGameSounds();
@@ -248,6 +253,25 @@ function GameContent() {
     }
   };
 
+  const onMusicReady = (event: any) => {
+    musicPlayerRef.current = event.target;
+    event.target.setVolume(10); // Lowered from 20 to 10 to be below SFX
+    if (!isMusicMuted) {
+      event.target.playVideo();
+    }
+  };
+
+  const toggleMusicMute = () => {
+    if (musicPlayerRef.current) {
+      if (isMusicMuted) {
+        musicPlayerRef.current.unMute();
+      } else {
+        musicPlayerRef.current.mute();
+      }
+    }
+    setIsMusicMuted(!isMusicMuted);
+  };
+
   const isMyTurn = () => {
     if (!gameState.gameStarted || !myPlayerId) return false;
     const currentPlayer = gameState.players[gameState.currentPlayerIndex];
@@ -392,6 +416,16 @@ function GameContent() {
             </div>
 
             <div className="flex gap-2">
+              {/* Music Toggle */}
+              <button
+                onClick={toggleMusicMute}
+                className="p-2.5 bg-poker-wood hover:bg-poker-wood-light text-poker-gold 
+                         rounded-lg btn-poker border border-poker-gold/30 hover:border-poker-gold
+                         transition-all duration-200"
+                title={isMusicMuted ? "Unmute Music" : "Mute Music"}
+              >
+                {isMusicMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              </button>
               {isHost && !gameState.gameStarted && gameState.players.length >= 2 && (
                 <button
                   onClick={startGame}
@@ -420,7 +454,7 @@ function GameContent() {
           </div>
 
           {/* Main Content with Right Sidebar */}
-          <div className="flex gap-3">
+          <div className="flex">
             {/* Main Game Area - Center */}
             <div className="flex-1 space-y-3 overflow-y-auto poker-scrollbar" style={{ height: 'calc(100vh - 120px)' }}>
               {/* Players - Top Horizontal Scroll */}
@@ -429,7 +463,7 @@ function GameContent() {
                   {gameState.players.map((player, index) => (
                     <div
                       key={player.id}
-                      className={`rounded-lg p-2 min-w-[180px] transition-all duration-300 flex-shrink-0
+                      className={`rounded-lg p-2 min-w-[140px] md:min-w-[180px] transition-all duration-300 flex-shrink-0
                                 ${index === gameState.currentPlayerIndex
                           ? "bg-poker-gold/20 border-2 border-poker-gold scale-105"
                           : "bg-poker-wood/30 border-2 border-poker-gold/20"
@@ -439,7 +473,7 @@ function GameContent() {
                         <div className="font-semibold text-white truncate max-w-[120px]" title={player.name}>
                           {player.name}
                         </div>
-                        <div className="chip w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-poker-wood flex-shrink-0">
+                        <div className="chip w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-bold text-poker-wood flex-shrink-0">
                           {player.cardCount}
                         </div>
                       </div>
@@ -464,13 +498,13 @@ function GameContent() {
                         Central Pile
                       </div>
                       <div className="flex items-center justify-center gap-2">
-                        <div className="chip w-16 h-16 rounded-full flex items-center justify-center">
-                          <span className="text-2xl font-bold text-poker-wood">{gameState.pileCount}</span>
+                        <div className="chip w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center">
+                          <span className="text-xl md:text-2xl font-bold text-poker-wood">{gameState.pileCount}</span>
                         </div>
                         <div className="text-left">
                           <div className="text-gray-400 text-xs">Cards</div>
                           {gameState.currentRank && (
-                            <div className="text-xl font-bold text-poker-gold">
+                            <div className="text-lg md:text-xl font-bold text-poker-gold">
                               Rank: {gameState.currentRank}
                             </div>
                           )}
@@ -494,8 +528,8 @@ function GameContent() {
                     <div className="flex justify-center">
                       <button
                         onClick={callBluff}
-                        className="px-8 py-3 bg-red-700 hover:bg-red-600 text-white 
-                                 font-bold text-lg rounded-xl btn-poker
+                        className="px-6 py-2 md:px-8 md:py-3 bg-red-700 hover:bg-red-600 text-white 
+                                 font-bold text-base md:text-lg rounded-xl btn-poker
                                  border-2 border-red-900 hover:border-red-500
                                  shadow-xl hover:shadow-red-500/30
                                  transition-all duration-300 transform hover:scale-110 active:scale-95"
@@ -637,31 +671,44 @@ function GameContent() {
               )}
             </div>
 
+            {/* Sidebar Toggle Button (Gutter) */}
+            <div className="flex flex-col justify-center">
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="p-1 bg-poker-wood border border-poker-gold/30 rounded-lg 
+                         text-poker-gold hover:text-white hover:border-poker-gold
+                         transition-all duration-200 shadow-lg z-20"
+                title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              >
+                {isSidebarOpen ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+              </button>
+            </div>
+
             {/* Right Sidebar - Game Log (top half) and Chat (bottom half) */}
-            <div className="w-80 flex-shrink-0 space-y-3 flex flex-col" style={{ height: 'calc(100vh - 120px)' }}>
+            <div
+              className={`flex-shrink-0 space-y-3 flex flex-col transition-width duration-300 ease-in-out
+                ${isSidebarOpen
+                  ? 'w-64 xl:w-80 opacity-100'
+                  : 'w-0 opacity-0 overflow-hidden'
+                }`}
+              style={{ height: 'calc(100vh - 120px)' }}
+            >
               {/* Game Log - Top Half of Right Sidebar */}
-              <div className={`poker-panel rounded-xl p-4 backdrop-blur-sm flex-1 flex flex-col ${isLogMinimized ? '' : 'overflow-hidden'}`}>
+              <div className="poker-panel rounded-xl p-4 backdrop-blur-sm flex-1 flex flex-col overflow-hidden">
                 <div className="flex justify-between items-center mb-3 border-b border-poker-gold/30 pb-2">
                   <h3 className="font-bold text-poker-gold text-sm uppercase tracking-wider">
                     Game Log
                   </h3>
-                  <button
-                    onClick={() => setIsLogMinimized(!isLogMinimized)}
-                    className="text-poker-gold hover:text-poker-gold-dark transition-colors duration-200 font-bold text-lg"
-                    title={isLogMinimized ? "Maximize log" : "Minimize log"}
-                  >
-                    {isLogMinimized ? '▲' : '▼'}
-                  </button>
                 </div>
-                {!isLogMinimized && (
-                  <div className="space-y-2 overflow-y-auto poker-scrollbar flex-1">
-                    {logs.map((log, i) => (
-                      <div key={i} className="text-sm border-l-2 border-poker-gold/50 pl-3 py-1 text-gray-200">
-                        {log}
-                      </div>
-                    ))}
-                  </div>
-                )}
+
+                <div className="space-y-2 overflow-y-auto poker-scrollbar flex-1">
+                  {logs.map((log, i) => (
+                    <div key={i} className="text-sm border-l-2 border-poker-gold/50 pl-3 py-1 text-gray-200">
+                      {log}
+                    </div>
+                  ))}
+                </div>
+
               </div>
 
               {/* Chat - Bottom Half of Right Sidebar */}
@@ -724,6 +771,24 @@ function GameContent() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Background Music Player (Hidden) */}
+      <div className="hidden">
+        <YouTube
+          videoId={BACKGROUND_MUSIC_ID}
+          opts={{
+            height: '0',
+            width: '0',
+            playerVars: {
+              autoplay: 1,
+              controls: 0,
+              loop: 1,
+              playlist: BACKGROUND_MUSIC_ID, // Required for loop to work
+            },
+          }}
+          onReady={onMusicReady}
+        />
       </div>
     </>
   );

@@ -6,7 +6,7 @@ export const useGameSounds = () => {
     const soundsRef = useRef<{ [key: string]: HTMLAudioElement }>({});
 
     useEffect(() => {
-     
+
         soundsRef.current = {
             cardPlay: new Audio('/sounds/card-play.mp3'),
             buttonClick: new Audio('/sounds/button-click.mp3'),
@@ -16,7 +16,7 @@ export const useGameSounds = () => {
             shuffle: new Audio('/sounds/shuffle.mp3'),
         };
 
-   
+
         Object.values(soundsRef.current).forEach(sound => {
             sound.volume = 0.3;
         });
@@ -28,11 +28,11 @@ export const useGameSounds = () => {
             if (sound) {
                 sound.currentTime = 0;
                 sound.play().catch(() => {
-                
+
                 });
             }
         } catch (error) {
-           
+
         }
     };
 
