@@ -1,15 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGameSounds } from "@/hooks/useGameSounds";
+import YouTube from "react-youtube";
+
+const BACKGROUND_MUSIC_ID = "PaFHwTjy1yE";
 
 export default function Home() {
   const [roomCode, setRoomCode] = useState("");
   const [playerName, setPlayerName] = useState<string>("");
   const [isCreating, setIsCreating] = useState(false);
+  const [isMusicMuted, setIsMusicMuted] = useState(false);
+  const musicPlayerRef = useRef<any>(null);
   const router = useRouter();
   const { playButtonSound } = useGameSounds();
+
+  const onMusicReady = (event: any) => {
+    musicPlayerRef.current = event.target;
+    // Start playing the music when it's ready
+    if (musicPlayerRef.current) {
+      musicPlayerRef.current.playVideo();
+      if (isMusicMuted) {
+        musicPlayerRef.current.mute();
+      }
+    }
+  };
+
+  const toggleMusicMute = () => {
+    if (musicPlayerRef.current) {
+      if (isMusicMuted) {
+        musicPlayerRef.current.unMute();
+      } else {
+        musicPlayerRef.current.mute();
+      }
+      setIsMusicMuted(!isMusicMuted);
+    }
+  };
 
   const createRoom = () => {
     if (!playerName.trim()) {
@@ -59,7 +86,30 @@ export default function Home() {
       </div>
 
       <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
-        <div className="w-full max-w-6xl space-y-8">
+        {/* Mute Button - Top Right Corner */}
+        <button
+          onClick={toggleMusicMute}
+          className="fixed top-4 right-4 p-2.5 bg-poker-wood/80 hover:bg-poker-wood text-poker-gold 
+                   rounded-full btn-poker border border-poker-gold/30 hover:border-poker-gold
+                   transition-all duration-200 z-20 shadow-lg"
+          title={isMusicMuted ? "Unmute Music" : "Mute Music"}
+        >
+          {isMusicMuted ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <line x1="23" y1="9" x2="17" y2="15"></line>
+              <line x1="17" y1="9" x2="23" y2="15"></line>
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+          )}
+        </button>
+
+        <div className="w-full max-w-6xl space-y-4 sm:space-y-6 md:space-y-8">
           {/* Title */}
           <div className="text-center space-y-3">
             <h1 className="text-7xl font-display font-bold tracking-wider">
@@ -84,7 +134,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-8">
+          <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
             {/* Game Rules Panel */}
             <div className="poker-panel rounded-2xl p-8 space-y-6 backdrop-blur-sm">
               <h2 className="text-2xl font-display font-semibold text-poker-gold text-center border-b border-poker-gold/30 pb-4">
@@ -159,8 +209,8 @@ export default function Home() {
                     type="text"
                     value={playerName || ''}
                     onChange={(e) => setPlayerName(e.target.value)}
-                    className="w-full px-5 py-3 bg-poker-wood border-2 border-poker-gold/30 rounded-lg 
-                             text-white placeholder-gray-500 
+                    className="w-full px-3 sm:px-4 md:px-5 py-2 sm:py-3 bg-poker-wood border-2 border-poker-gold/30 rounded-lg 
+                             text-white placeholder-gray-500 text-sm sm:text-base
                              focus:outline-none focus:border-poker-gold focus:ring-2 focus:ring-poker-gold/20
                              transition-all duration-200"
                     placeholder="Enter your name"
@@ -173,12 +223,11 @@ export default function Home() {
                   <button
                     onClick={createRoom}
                     disabled={isCreating}
-                    className="w-full py-4 bg-poker-gold hover:bg-poker-gold-dark text-poker-burgundy 
-                             font-semibold text-lg rounded-lg 
+                    className="w-full py-3 sm:py-4 bg-poker-gold hover:bg-poker-gold-dark text-poker-burgundy 
+                             font-semibold text-base sm:text-lg rounded-lg 
                              border-2 border-poker-gold/40
                              shadow-lg
-                             transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-                             "
+                             transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Create New Game
                   </button>
@@ -186,12 +235,11 @@ export default function Home() {
                   <button
                     onClick={startSinglePlayer}
                     disabled={isCreating}
-                    className="w-full py-4 bg-poker-gold hover:bg-poker-gold-dark text-poker-burgundy 
-                             font-semibold text-lg rounded-lg 
+                    className="w-full py-3 sm:py-4 bg-poker-gold hover:bg-poker-gold-dark text-poker-burgundy 
+                             font-semibold text-base sm:text-lg rounded-lg 
                              border-2 border-poker-gold/40
                              shadow-lg
-                             transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-                             "
+                             transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Play vs Bot
                   </button>
@@ -213,8 +261,8 @@ export default function Home() {
                     type="text"
                     value={roomCode || ''}
                     onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                    className="w-full px-5 py-3 bg-poker-wood border-2 border-poker-gold/30 rounded-lg 
-                             text-center text-2xl font-bold text-poker-gold tracking-[0.3em] 
+                    className="w-full px-3 sm:px-4 md:px-5 py-2 sm:py-3 bg-poker-wood border-2 border-poker-gold/30 rounded-lg 
+                             text-center text-lg sm:text-xl md:text-2xl font-bold text-poker-gold tracking-[0.3em] 
                              placeholder-gray-600 uppercase
                              focus:outline-none focus:border-poker-gold focus:ring-2 focus:ring-poker-gold/20
                              transition-all duration-200"
@@ -236,6 +284,24 @@ export default function Home() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Background Music Player (Hidden) */}
+      <div className="hidden">
+        <YouTube
+          videoId={BACKGROUND_MUSIC_ID}
+          opts={{
+            height: '0',
+            width: '0',
+            playerVars: {
+              autoplay: 1,
+              controls: 0,
+              loop: 1,
+              playlist: BACKGROUND_MUSIC_ID, // Required for loop to work
+            },
+          }}
+          onReady={onMusicReady}
+        />
       </div>
     </>
   );

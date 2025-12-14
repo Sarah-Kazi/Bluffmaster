@@ -730,7 +730,7 @@ function GameContent() {
                 </div>
 
                 {/* Chat Input */}
-                <div className="flex gap-1.5">
+                <div className="flex gap-1.5 w-full">
                   <input
                     type="text"
                     value={chatInput}
@@ -741,19 +741,19 @@ function GameContent() {
                       }
                     }}
                     placeholder="Message..."
-                    className="flex-1 px-2 py-1.5 bg-poker-wood border border-poker-gold/30 rounded-lg 
-                             text-white text-xs placeholder-gray-400
+                    className="flex-1 px-2 py-1 sm:py-1.5 bg-poker-wood border border-poker-gold/30 rounded-lg 
+                             text-white text-[11px] sm:text-xs placeholder-gray-400
                              focus:outline-none focus:border-poker-gold focus:ring-1 focus:ring-poker-gold/30
-                             transition-all duration-200"
+                             transition-all duration-200 w-full"
                     maxLength={100}
                   />
                   <button
                     onClick={sendChatMessage}
                     disabled={!chatInput.trim()}
-                    className="px-3 py-1.5 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
-                             font-semibold text-xs rounded-lg btn-poker whitespace-nowrap
+                    className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
+                             font-semibold text-[11px] sm:text-xs rounded-lg btn-poker whitespace-nowrap
                              disabled:opacity-50 disabled:cursor-not-allowed
-                             border border-poker-wood/50
+                             border border-poker-wood/50 w-16 sm:w-auto
                              transition-all duration-200"
                   >
                     Send
