@@ -553,13 +553,6 @@ function GameContent() {
                   {isMyTurn() && (
                     <div className="poker-panel rounded-xl p-2 md:p-4 space-y-2 md:space-y-4 backdrop-blur-sm 
                                   border-poker-gold shadow-lg animate-pulse-glow">
-                      <div className="text-center">
-                        <span className="inline-block px-4 py-1.5 bg-poker-gold text-poker-wood 
-                                       font-bold text-xs md:text-base rounded-full">
-                          YOUR TURN
-                        </span>
-                      </div>
-
                       {!gameState.roundEnded && gameState.currentRank && (
                         <div className="space-y-2 md:space-y-4">
                           <div className="flex flex-wrap gap-2 justify-center items-center">
@@ -686,7 +679,7 @@ function GameContent() {
             <div
               className={`relative flex-shrink-0 space-y-3 flex flex-col transition-width duration-300 ease-in-out
                 ${isSidebarOpen
-                  ? 'w-64 xl:w-80 opacity-100'
+                  ? 'w-56 xl:w-72 opacity-100'
                   : 'w-0 opacity-0 overflow-hidden'
                 }`}
               style={{ height: 'calc(100vh - 120px)' }}
@@ -737,7 +730,7 @@ function GameContent() {
                 </div>
 
                 {/* Chat Input */}
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                   <input
                     type="text"
                     value={chatInput}
@@ -747,9 +740,9 @@ function GameContent() {
                         sendChatMessage();
                       }
                     }}
-                    placeholder="Type a message..."
-                    className="flex-1 px-3 py-2 bg-poker-wood border border-poker-gold/30 rounded-lg 
-                             text-white text-sm placeholder-gray-400
+                    placeholder="Message..."
+                    className="flex-1 px-2 py-1.5 bg-poker-wood border border-poker-gold/30 rounded-lg 
+                             text-white text-xs placeholder-gray-400
                              focus:outline-none focus:border-poker-gold focus:ring-1 focus:ring-poker-gold/30
                              transition-all duration-200"
                     maxLength={100}
@@ -757,10 +750,10 @@ function GameContent() {
                   <button
                     onClick={sendChatMessage}
                     disabled={!chatInput.trim()}
-                    className="px-4 py-2 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
-                             font-semibold text-sm rounded-lg btn-poker
+                    className="px-3 py-1.5 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
+                             font-semibold text-xs rounded-lg btn-poker whitespace-nowrap
                              disabled:opacity-50 disabled:cursor-not-allowed
-                             border-2 border-poker-wood/50
+                             border border-poker-wood/50
                              transition-all duration-200"
                   >
                     Send

@@ -6,7 +6,7 @@ import { useGameSounds } from "@/hooks/useGameSounds";
 
 export default function Home() {
   const [roomCode, setRoomCode] = useState("");
-  const [playerName, setPlayerName] = useState("");
+  const [playerName, setPlayerName] = useState<string>("");
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
   const { playButtonSound } = useGameSounds();
@@ -157,7 +157,7 @@ export default function Home() {
                   </label>
                   <input
                     type="text"
-                    value={playerName}
+                    value={playerName || ''}
                     onChange={(e) => setPlayerName(e.target.value)}
                     className="w-full px-5 py-3 bg-poker-wood border-2 border-poker-gold/30 rounded-lg 
                              text-white placeholder-gray-500 
@@ -211,7 +211,7 @@ export default function Home() {
                   {/* Room Code Input */}
                   <input
                     type="text"
-                    value={roomCode}
+                    value={roomCode || ''}
                     onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                     className="w-full px-5 py-3 bg-poker-wood border-2 border-poker-gold/30 rounded-lg 
                              text-center text-2xl font-bold text-poker-gold tracking-[0.3em] 
