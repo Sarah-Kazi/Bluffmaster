@@ -483,10 +483,10 @@ function GameContent() {
               {isHost && !gameState.gameStarted && gameState.players.length >= 2 && (
                 <button
                   onClick={startGame}
-                  className="px-6 py-2.5 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
-                           font-bold text-xl py-4 px-8 rounded-xl 
+                  className="px-5 py-2.5 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
+                           font-semibold rounded-lg btn-poker flex items-center gap-2
                            border-2 border-poker-wood hover:scale-105
-                           transition-all duration-200 shadow-lg"
+                           transition-transform duration-200 shadow-lg"
                 >
                   Start Game
                 </button>
