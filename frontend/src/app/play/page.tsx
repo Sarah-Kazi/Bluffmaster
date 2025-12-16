@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { X } from "lucide-react";
+import { X, Volume2, VolumeX } from "lucide-react";
 import { useGameSounds } from "@/hooks/useGameSounds";
+import YouTube from "react-youtube";
+
+const BACKGROUND_MUSIC_ID = "PaFHwTjy1yE";
 
 function PlayEntryPageContent() {
   const router = useRouter();
@@ -18,6 +21,32 @@ function PlayEntryPageContent() {
   ];
   type Ad = { id: number; text: string };
   const [ads, setAds] = useState<Ad[]>([]);
+  const [isMusicMuted, setIsMusicMuted] = useState(false);
+  const [musicVolume, setMusicVolume] = useState(50);
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const musicPlayerRef = useRef<any>(null);
+  const volumeControlRef = useRef<HTMLDivElement>(null);
+
+  // Close volume slider when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (volumeControlRef.current && !volumeControlRef.current.contains(event.target as Node)) {
+        setShowVolumeSlider(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Update YouTube player volume when musicVolume changes
+  useEffect(() => {
+    if (musicPlayerRef.current) {
+      musicPlayerRef.current.setVolume(musicVolume);
+    }
+  }, [musicVolume]);
 
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -30,6 +59,37 @@ function PlayEntryPageContent() {
     });
     return () => timers.forEach(clearTimeout);
   }, []);
+
+  const toggleMusicMute = () => {
+    if (musicPlayerRef.current) {
+      if (isMusicMuted) {
+        musicPlayerRef.current.unMute();
+        musicPlayerRef.current.setVolume(musicVolume);
+      } else {
+        musicPlayerRef.current.mute();
+      }
+      setIsMusicMuted(!isMusicMuted);
+    }
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseInt(e.target.value);
+    setMusicVolume(newVolume);
+    if (newVolume > 0 && isMusicMuted) {
+      setIsMusicMuted(false);
+      if (musicPlayerRef.current) {
+        musicPlayerRef.current.unMute();
+      }
+    }
+  };
+
+  const onMusicReady = (event: any) => {
+    musicPlayerRef.current = event.target;
+    event.target.setVolume(musicVolume);
+    if (!isMusicMuted) {
+      event.target.playVideo();
+    }
+  };
 
   const closeAd = (id: number) => {
     setAds((prev) => prev.filter((ad) => ad.id !== id));
@@ -57,6 +117,65 @@ function PlayEntryPageContent() {
       </div>
 
       <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+        {/* Hidden YouTube Player */}
+        <div className="hidden">
+          <YouTube
+            videoId={BACKGROUND_MUSIC_ID}
+            onReady={onMusicReady}
+            opts={{
+              playerVars: {
+                autoplay: 1,
+                loop: 1,
+                playlist: BACKGROUND_MUSIC_ID,
+                controls: 0,
+                disablekb: 1,
+                fs: 0,
+                iv_load_policy: 3,
+                modestbranding: 1,
+                rel: 0,
+                showinfo: 0,
+              },
+            }}
+          />
+        </div>
+
+        {/* Volume Control */}
+        <div className="fixed top-4 right-4 z-20" ref={volumeControlRef}>
+          <div className="relative">
+            <button
+              onClick={toggleMusicMute}
+              onMouseEnter={() => setShowVolumeSlider(true)}
+              className="p-2.5 bg-poker-wood/80 hover:bg-poker-wood text-poker-gold 
+                       rounded-full btn-poker border border-poker-gold/30 hover:border-poker-gold
+                       transition-all duration-200 shadow-lg flex items-center justify-center"
+              title={isMusicMuted ? "Unmute Music" : "Mute Music"}
+            >
+              {isMusicMuted || musicVolume === 0 ? (
+                <VolumeX className="w-5 h-5" />
+              ) : (
+                <Volume2 className="w-5 h-5" />
+              )}
+            </button>
+            
+            {showVolumeSlider && (
+              <div 
+                className="absolute right-full top-1/2 transform -translate-y-1/2 mr-3 p-3 bg-poker-wood/90 backdrop-blur-sm rounded-lg shadow-xl border border-poker-gold/20"
+                onMouseLeave={() => setShowVolumeSlider(false)}
+              >
+                <div className="w-32 h-6 flex items-center">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={musicVolume}
+                    onChange={handleVolumeChange}
+                    className="w-full h-1 bg-poker-gold/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-poker-gold [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-webkit-slider-thumb]:ease-in-out [&::-webkit-slider-thumb]:hover:scale-125"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
         <div className="text-center space-y-8">
           {!rickrolled ? (
             <div className="space-y-6 animate-fade-in">

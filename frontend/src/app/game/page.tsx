@@ -69,13 +69,15 @@ function GameContent() {
   const [chatInput, setChatInput] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMusicMuted, setIsMusicMuted] = useState(false);
+  const [musicVolume, setMusicVolume] = useState(50);
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const musicPlayerRef = useRef<any>(null);
+  const volumeControlRef = useRef<HTMLDivElement>(null);
 
   const [chatMessages, setChatMessages] = useState<Array<{ id: string; playerName: string; text: string; timestamp: number }>>([]);
   const { playCardSound, playButtonSound, playBluffSound, playWinSound } = useGameSounds();
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
-
 
   useEffect(() => {
     if (isAtBottom && chatContainerRef.current) {
@@ -191,6 +193,25 @@ function GameContent() {
   }, [roomCode, playerName]);
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (volumeControlRef.current && !volumeControlRef.current.contains(event.target as Node)) {
+        setShowVolumeSlider(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (musicPlayerRef.current) {
+      musicPlayerRef.current.setVolume(musicVolume);
+    }
+  }, [musicVolume]);
+
+  useEffect(() => {
     if (!socket || !connected || !isHost || !isSinglePlayer) return;
     if (gameState.leaderboard && gameState.leaderboard.length > 0) return;
     const timer = setTimeout(() => {
@@ -255,7 +276,7 @@ function GameContent() {
 
   const onMusicReady = (event: any) => {
     musicPlayerRef.current = event.target;
-    event.target.setVolume(10); // Lowered from 20 to 10 to be below SFX
+    event.target.setVolume(musicVolume);
     if (!isMusicMuted) {
       event.target.playVideo();
     }
@@ -265,11 +286,23 @@ function GameContent() {
     if (musicPlayerRef.current) {
       if (isMusicMuted) {
         musicPlayerRef.current.unMute();
+        musicPlayerRef.current.setVolume(musicVolume);
       } else {
         musicPlayerRef.current.mute();
       }
+      setIsMusicMuted(!isMusicMuted);
     }
-    setIsMusicMuted(!isMusicMuted);
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseInt(e.target.value);
+    setMusicVolume(newVolume);
+    if (newVolume > 0 && isMusicMuted) {
+      setIsMusicMuted(false);
+      if (musicPlayerRef.current) {
+        musicPlayerRef.current.unMute();
+      }
+    }
   };
 
   const isMyTurn = () => {
@@ -395,7 +428,7 @@ function GameContent() {
         <div className="max-w-[1920px] mx-auto">
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 
-                        poker-panel rounded-xl p-4 backdrop-blur-sm mb-3">
+                        poker-panel rounded-xl p-4 backdrop-blur-sm mb-3 relative z-[1000]">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-display font-bold text-poker-gold">
                 Room: {roomCode}
@@ -416,21 +449,42 @@ function GameContent() {
             </div>
 
             <div className="flex gap-2">
-              {/* Music Toggle */}
-              <button
-                onClick={toggleMusicMute}
-                className="p-2.5 bg-poker-wood hover:bg-poker-wood-light text-poker-gold 
-                         rounded-lg btn-poker border border-poker-gold/30 hover:border-poker-gold
-                         transition-all duration-200"
-                title={isMusicMuted ? "Unmute Music" : "Mute Music"}
-              >
-                {isMusicMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              </button>
+              {/* Volume Control */}
+              <div className="relative h-full flex items-center" ref={volumeControlRef}>
+                <button
+                  onClick={toggleMusicMute}
+                  onMouseEnter={() => setShowVolumeSlider(true)}
+                  className="p-2.5 bg-poker-wood hover:bg-poker-wood-light text-poker-gold 
+                           rounded-lg btn-poker border border-poker-gold/30 hover:border-poker-gold
+                           transition-all duration-200 flex items-center justify-center h-10"
+                  title={isMusicMuted ? "Unmute Music" : "Mute Music"}
+                >
+                  {isMusicMuted || musicVolume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                </button>
+                
+                {showVolumeSlider && (
+                  <div 
+                    className="absolute right-0 top-full mt-2 p-3 bg-poker-wood/90 backdrop-blur-sm rounded-lg shadow-xl border border-poker-gold/20"
+                    onMouseLeave={() => setShowVolumeSlider(false)}
+                  >
+                    <div className="w-32 h-6 flex items-center">
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={musicVolume}
+                        onChange={handleVolumeChange}
+                        className="w-full h-1 bg-poker-gold/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-poker-gold [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-webkit-slider-thumb]:ease-in-out [&::-webkit-slider-thumb]:hover:scale-125"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
               {isHost && !gameState.gameStarted && gameState.players.length >= 2 && (
                 <button
                   onClick={startGame}
                   className="px-6 py-2.5 bg-poker-gold hover:bg-poker-gold-dark text-poker-wood 
-                           font-bold rounded-lg btn-poker
+                           font-bold text-xl py-4 px-8 rounded-xl 
                            border-2 border-poker-wood hover:scale-105
                            transition-all duration-200 shadow-lg"
                 >

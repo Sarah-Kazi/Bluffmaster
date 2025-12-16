@@ -12,9 +12,33 @@ export default function Home() {
   const [playerName, setPlayerName] = useState<string>("");
   const [isCreating, setIsCreating] = useState(false);
   const [isMusicMuted, setIsMusicMuted] = useState(false);
+  const [musicVolume, setMusicVolume] = useState(50);
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const musicPlayerRef = useRef<any>(null);
+  const volumeControlRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { playButtonSound } = useGameSounds();
+
+  // Close volume slider when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (volumeControlRef.current && !volumeControlRef.current.contains(event.target as Node)) {
+        setShowVolumeSlider(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Update YouTube player volume when musicVolume changes
+  useEffect(() => {
+    if (musicPlayerRef.current) {
+      musicPlayerRef.current.setVolume(musicVolume);
+    }
+  }, [musicVolume]);
 
   const onMusicReady = (event: any) => {
     musicPlayerRef.current = event.target;
@@ -31,10 +55,22 @@ export default function Home() {
     if (musicPlayerRef.current) {
       if (isMusicMuted) {
         musicPlayerRef.current.unMute();
+        musicPlayerRef.current.setVolume(musicVolume);
       } else {
         musicPlayerRef.current.mute();
       }
       setIsMusicMuted(!isMusicMuted);
+    }
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseInt(e.target.value);
+    setMusicVolume(newVolume);
+    if (newVolume > 0 && isMusicMuted) {
+      setIsMusicMuted(false);
+      if (musicPlayerRef.current) {
+        musicPlayerRef.current.unMute();
+      }
     }
   };
 
@@ -86,28 +122,50 @@ export default function Home() {
       </div>
 
       <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
-        {/* Mute Button - Top Right Corner */}
-        <button
-          onClick={toggleMusicMute}
-          className="fixed top-4 right-4 p-2.5 bg-poker-wood/80 hover:bg-poker-wood text-poker-gold 
-                   rounded-full btn-poker border border-poker-gold/30 hover:border-poker-gold
-                   transition-all duration-200 z-20 shadow-lg"
-          title={isMusicMuted ? "Unmute Music" : "Mute Music"}
-        >
-          {isMusicMuted ? (
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <line x1="23" y1="9" x2="17" y2="15"></line>
-              <line x1="17" y1="9" x2="23" y2="15"></line>
-            </svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-            </svg>
-          )}
-        </button>
+        {/* Volume Control - Top Right */}
+        <div className="fixed top-4 right-4 z-20" ref={volumeControlRef}>
+          <div className="relative">
+            <button
+              onClick={toggleMusicMute}
+              onMouseEnter={() => setShowVolumeSlider(true)}
+              className="p-2.5 bg-poker-wood/80 hover:bg-poker-wood text-poker-gold 
+                       rounded-full btn-poker border border-poker-gold/30 hover:border-poker-gold
+                       transition-all duration-200 shadow-lg flex items-center justify-center"
+              title={isMusicMuted ? "Unmute Music" : "Mute Music"}
+            >
+              {isMusicMuted || musicVolume === 0 ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <line x1="23" y1="9" x2="17" y2="15"></line>
+                  <line x1="17" y1="9" x2="23" y2="15"></line>
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+              )}
+            </button>
+            
+            {showVolumeSlider && (
+              <div 
+                className="absolute right-full top-1/2 transform -translate-y-1/2 mr-3 p-3 bg-poker-wood/90 backdrop-blur-sm rounded-lg shadow-xl border border-poker-gold/20"
+                onMouseLeave={() => setShowVolumeSlider(false)}
+              >
+                <div className="w-32 h-6 flex items-center">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={musicVolume}
+                    onChange={handleVolumeChange}
+                    className="w-full h-1 bg-poker-gold/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-poker-gold [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-webkit-slider-thumb]:ease-in-out [&::-webkit-slider-thumb]:hover:scale-125"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="w-full max-w-6xl space-y-4 sm:space-y-6 md:space-y-8">
           {/* Title */}
@@ -136,12 +194,12 @@ export default function Home() {
 
           <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
             {/* Game Rules Panel */}
-            <div className="poker-panel rounded-2xl p-8 space-y-6 backdrop-blur-sm">
-              <h2 className="text-2xl font-display font-semibold text-poker-gold text-center border-b border-poker-gold/30 pb-4">
+            <div className="poker-panel rounded-2xl p-5 space-y-3 backdrop-blur-sm">
+              <h2 className="text-xl font-display font-semibold text-poker-gold text-center border-b border-poker-gold/30 pb-2">
                 Game Rules
               </h2>
 
-              <div className="space-y-4 text-base text-gray-200">
+              <div className="space-y-3 text-base text-gray-200">
                 <div className="flex items-start space-x-3">
                   <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-poker-burgundy text-poker-gold font-bold text-sm flex-shrink-0">
                     1
@@ -188,18 +246,24 @@ export default function Home() {
                   <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-poker-burgundy text-poker-gold font-bold text-sm flex-shrink-0">
                     7
                   </span>
-                  <p className="leading-relaxed font-semibold text-poker-gold">First player to get rid of all cards wins!</p>
+                 <p className="leading-relaxed font-semibold text-poker-gold">First player to get rid of all cards wins!</p> 
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-poker-burgundy text-poker-gold font-bold text-sm flex-shrink-0">
+                    8
+                  </span>
+                   <p className="leading-relaxed font-semibold text-poker-gold">Use full screen mode :D</p>
                 </div>
               </div>
             </div>
 
             {/* Play Panel */}
-            <div className="poker-panel rounded-2xl p-8 space-y-6 backdrop-blur-sm">
-              <h2 className="text-2xl font-display font-semibold text-poker-gold text-center border-b border-poker-gold/30 pb-4">
+            <div className="poker-panel rounded-2xl p-5 space-y-3 backdrop-blur-sm">
+              <h2 className="text-xl font-display font-semibold text-poker-gold text-center border-b border-poker-gold/30 pb-2">
                 Enter Game
               </h2>
 
-              <div className="space-y-5">
+              <div className="space-y-3">
                 {/* Player Name Input */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2 uppercase tracking-wide">
