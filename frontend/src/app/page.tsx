@@ -198,8 +198,13 @@ export default function Home() {
               <h2 className="text-xl font-display font-semibold text-poker-gold text-center border-b border-poker-gold/30 pb-2">
                 Game Rules
               </h2>
-
               <div className="space-y-3 text-base text-gray-200">
+                <div className="flex items-start space-x-3">
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-poker-burgundy text-poker-gold font-bold text-sm flex-shrink-0">
+                    0
+                  </span>
+                  <p className="leading-relaxed">Use fullscreen mode :D </p>
+                </div>
                 <div className="flex items-start space-x-3">
                   <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-poker-burgundy text-poker-gold font-bold text-sm flex-shrink-0">
                     1
@@ -247,12 +252,6 @@ export default function Home() {
                     7
                   </span>
                  <p className="leading-relaxed font-semibold text-poker-gold">First player to get rid of all cards wins!</p> 
-                </div>
-                <div className="flex items-start space-x-3">
-                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-poker-burgundy text-poker-gold font-bold text-sm flex-shrink-0">
-                    8
-                  </span>
-                   <p className="leading-relaxed font-semibold text-poker-gold">Use full screen mode :D</p>
                 </div>
               </div>
             </div>
