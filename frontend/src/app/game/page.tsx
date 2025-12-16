@@ -840,7 +840,22 @@ function GameContent() {
   );
 }
 
+
+
 export default function GamePage() {
+  useEffect(() => {
+    // Only run in development
+    if (process.env.NODE_ENV === 'development') {
+      const keepAlive = setInterval(() => {
+        fetch('/api/health')
+          .then(res => res.json())
+          .catch(console.error);
+      }, 5 * 60 * 1000); 
+
+      return () => clearInterval(keepAlive);
+    }
+  }, []);
+
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
