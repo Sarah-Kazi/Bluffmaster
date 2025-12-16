@@ -267,7 +267,7 @@ export default function Home() {
                 {/* Player Name Input */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2 uppercase tracking-wide">
-                    Your Name
+                    
                   </label>
                   <input
                     type="text"
