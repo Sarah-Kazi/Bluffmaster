@@ -331,7 +331,7 @@ function GameContent() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="text-6xl text-poker-gold animate-pulse">♠</div>
-          <div className="text-2xl text-poker-gold font-display">Connecting to table...</div>
+          <div className="text-2xl text-poker-gold font-display">Connecting to table...  (If it takes too long, its cuz im broke and render's skill issue D: ples wait for 15-20seconds thanks ehhe)</div>
         </div>
       </div>
     );
